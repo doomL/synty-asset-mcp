@@ -70,6 +70,7 @@ class Settings:
     syntydex_export_file: Path | None = None
     store_enabled: bool = False
     store_downloads_url: str | None = None
+    store_browser: str = "auto"  # auto (Google Chrome if installed) | chrome | chromium
     store_link_selector: str = "a[href]"
     store_link_text_regex: str = r"(?i)download|\.zip|\.unitypackage"
 

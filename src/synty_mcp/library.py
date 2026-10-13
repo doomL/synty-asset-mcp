@@ -4,6 +4,7 @@ them into an organised tree, and register existing folders in place."""
 from __future__ import annotations
 
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -192,6 +193,14 @@ def register_folder(settings: Settings, db: StateDB, path: Path, pack: str | Non
             s, score = packs.match_pack(db, n)
             if s and score > best:
                 slug, best = s, score
+        if not slug:
+            # Source Files ship MaterialList_<PackName>.txt: "POLYGONCityCharacters" -> POLYGON_City_Characters
+            for ml in path.glob("MaterialList*.txt"):
+                raw = ml.stem.split("_", 1)[-1]
+                name = "_".join(re.findall(r"[A-Z]+(?=[A-Z][a-z])|[A-Z][a-z]+|[A-Z]+|\d+", raw))
+                slug = packs.ensure_pack(db, name, source=f"folder:{ml.name}")
+                if slug:
+                    break
         if not slug:
             raise ValueError("could not infer the pack from the folder; pass pack=")
     kind = archives.classify_tree(path)

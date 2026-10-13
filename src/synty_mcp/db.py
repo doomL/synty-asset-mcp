@@ -130,6 +130,10 @@ class StateDB:
         cols = {r["name"] for r in self.q("PRAGMA table_info(jobs)")}
         if "pid" not in cols:
             self._con().execute("ALTER TABLE jobs ADD COLUMN pid INTEGER")
+        cols = {r["name"] for r in self.q("PRAGMA table_info(store_items)")}
+        for col, typ in (("variant", "TEXT"), ("size_bytes", "INTEGER")):
+            if col not in cols:
+                self._con().execute(f"ALTER TABLE store_items ADD COLUMN {col} {typ}")
 
     def _con(self) -> sqlite3.Connection:
         con = getattr(self._local, "con", None)

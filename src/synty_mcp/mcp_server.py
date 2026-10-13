@@ -66,10 +66,10 @@ def build_server(svc: Service) -> MCPServer:
         return svc.list_owned_packs()
 
     @tool(NETWORK)
-    def sync_owned_packs() -> dict:
+    def sync_owned_packs(wait: bool = True) -> dict:
         """Import archives dropped in the inbox folder and, if the Synty Store session is configured, list the
         account's downloadable files and match them to owned packs. Reports clearly when the store is unavailable."""
-        return svc.sync_owned_packs()
+        return svc.sync_owned_packs(wait=wait)
 
     @tool(NETWORK)
     def download_pack(
@@ -77,17 +77,19 @@ def build_server(svc: Service) -> MCPServer:
         kinds: Annotated[list[str] | None, Field(description="archive kinds to fetch: unity, source, godot, unreal")] = None,
         extract: bool = True,
         wait: bool = False,
+        timeout: float = 1800,
     ) -> dict:
         """Download a purchased pack from the Synty Store (needs the owner's saved session), skipping files already
         downloaded, then verify, extract and index it. Runs as a job. Without a store session it explains the
         manual-import fallback instead."""
-        return svc.download_pack(pack, kinds=kinds, extract=extract, wait=wait)
+        return svc.download_pack(pack, kinds=kinds, extract=extract, wait=wait, timeout=timeout)
 
     @tool(LOCAL_WRITE)
-    def extract_pack(pack: str, archive_id: int | None = None, force: bool = False, wait: bool = True) -> dict:
+    def extract_pack(pack: str, archive_id: int | None = None, force: bool = False, wait: bool = True,
+                     timeout: float = 1800) -> dict:
         """Extract a pack's verified archives (ZIP and .unitypackage, path-traversal safe) into the library and
         index it with synty-inventory. Idempotent: already extracted archives are skipped unless force=true."""
-        return svc.extract_pack(pack, archive_id=archive_id, force=force, wait=wait)
+        return svc.extract_pack(pack, archive_id=archive_id, force=force, wait=wait, timeout=timeout)
 
     @tool(LOCAL_WRITE)
     def import_archive(
@@ -105,10 +107,11 @@ def build_server(svc: Service) -> MCPServer:
         register_path: Annotated[str | None, Field(
             description="optional already-extracted folder to use in place (must be under source_roots)")] = None,
         wait: bool = True,
+        timeout: float = 1800,
     ) -> dict:
         """(Re)index extracted packs with synty-inventory: names, semantics, kits, measured bounds of converted
         GLBs, and the per-asset source model / texture resolution."""
-        return svc.scan_library(pack=pack, register_path=register_path, wait=wait)
+        return svc.scan_library(pack=pack, register_path=register_path, wait=wait, timeout=timeout)
 
     @tool(RO)
     def get_library_status() -> dict:

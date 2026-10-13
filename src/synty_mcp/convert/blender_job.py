@@ -259,6 +259,10 @@ def normalize_transforms():
     into an animated rig would invalidate its location keys."""
     if bpy.data.actions:
         return False
+    if any(o.type == "ARMATURE" for o in bpy.context.scene.objects):
+        # Rigs stay as authored (Synty: 0.01 armature scale) so separately converted
+        # animation clips keep matching them bone for bone.
+        return False
     objs = [o for o in bpy.context.scene.objects if o.type in ("MESH", "ARMATURE", "EMPTY")]
     if not objs:
         return False

@@ -132,3 +132,30 @@ def test_ambiguous_and_missing_refs(indexed_pack):
 
     with pytest.raises(ServiceError, match="not found"):
         indexed_pack.get_asset_details("SM_Does_Not_Exist")
+
+
+@pytest.mark.parametrize("text,concept", [
+    ("una chiave", "key"), ("una leva", "lever"), ("un mucchio d oro", "gold"), ("una gabbia", "cage"),
+    ("una pedana", "plate"), ("un pavimento", "floor"),
+])
+def test_props_lexicon(text, concept):
+    assert lexicon.analyse_phrase(text)["concept"] == concept
+
+
+def test_pack_name_gives_meaning_to_characters():
+    from synty_mcp.search import score_asset
+
+    item = lexicon.analyse_phrase("tre personaggi goblin")
+    chr_asset = {"id": "SM_Chr_Archer_Female_01", "type": "character", "kind": "prefab", "tags": [], "category": []}
+    tent = {"id": "SM_Bld_Tent_Basic_01", "type": "building/shell", "kind": "prefab", "tags": [], "category": []}
+    s_chr, why = score_asset(item, "POLYGON_Goblin_War_Camp", chr_asset)
+    assert s_chr > 0 and "pack:goblin" in why
+    assert score_asset(item, "POLYGON_Goblin_War_Camp", tent)[0] <= 0
+    assert score_asset(item, "POLYGON_FakeVillage", chr_asset)[0] <= 0
+
+
+def test_qualifier_fallback(indexed_pack):
+    # nothing in the fake pack is a "guard", but the well matches the qualifier-only fallback path
+    res = indexed_pack.search_assets("guardia pozzo")
+    assert res["results"] and res["results"][0]["id"] == "SM_Prop_Well_01"
+    assert res["understood"].get("fallback_concept") == "well"

@@ -125,8 +125,10 @@ def cmd_store_login(args) -> int:
     settings.ensure_dirs()
     from .db import StateDB
 
-    path = SyntyStore(settings, StateDB(settings.state_db)).login_interactive()
-    print(f"session saved to {path} (mode 0600). It is never exposed to agents.")
+    store = SyntyStore(settings, StateDB(settings.state_db))
+    path = store.login_terminal(args.email) if args.terminal else store.login_interactive()
+    print(f"session kept in the dedicated browser profile {path} (0700). It is never exposed to agents.")
+    print(json.dumps(store.status(), indent=2))
     return 0
 
 
@@ -180,7 +182,9 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--force", action="store_true")
     s.set_defaults(fn=cmd_convert)
 
-    s = sub.add_parser("store-login", help="log in to the Synty Store in a real browser and save the session")
+    s = sub.add_parser("store-login", help="log in to the Synty Store (browser window, or --terminal on a server)")
+    s.add_argument("--terminal", action="store_true", help="headless: type email and emailed code in the terminal")
+    s.add_argument("--email")
     s.set_defaults(fn=cmd_store_login)
 
     args = ap.parse_args(argv)

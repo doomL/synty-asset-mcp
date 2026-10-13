@@ -44,7 +44,7 @@ def test_real_pack_search_and_glb(tmp_path):
     assert f["available"], f
     g = glb_info(Path(f["path"]))
     assert g["triangles"] > 0 and g["images"], g
-    size = g["bounds"]["size"]
+    size = f["glb"]["bounds"]["size"]  # as reported by the MCP (Blender-evaluated for skinned meshes)
     assert 0.05 < max(size) < 200, size
     if model[1]["id"].startswith("SK_"):
         assert 1.0 < size[1] < 3.0, f"character height {size[1]} m"

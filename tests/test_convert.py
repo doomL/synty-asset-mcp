@@ -54,6 +54,9 @@ def test_animation_and_skin_preserved(indexed_pack_real):
     assert res["status"] == "done", res
     g = res["result"]["glb"]
     assert g["animations"] and g["skins"] == 1
+    # skinned: bounds come from Blender's evaluated mesh, not from raw accessors
+    assert g["bounds"]["source"] == "blender_evaluated"
+    assert near(g["bounds"]["size"], [0.6, 1.2, 0.4], tol=0.05)
 
 
 def test_presets_mobile_and_godot(indexed_pack_real):

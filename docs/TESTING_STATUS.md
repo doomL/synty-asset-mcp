@@ -5,8 +5,8 @@ Date: 2026-10-13. Environment: Linux, Python 3.12.3, Blender 4.2.3 LTS, Docker C
 ## Automated suite
 
 ```
-pytest                                   # 72 passed (with Blender + a real pack)
-pytest  (without Blender / real pack)    # 63 passed, 9 skipped
+pytest                                   # 83 passed (with Blender + a real pack)
+pytest  (without Blender / real pack)    # 74 passed, 9 skipped
 ```
 
 | File | Covers |
@@ -36,14 +36,14 @@ by Blender at test time. The repository contains no Synty files.
 
 | Feature | Status | Why / what is needed |
 |---|---|---|
-| Synty Store: login, purchase listing, download | **not tested** | no real session available; code complete but selectors and URL must be confirmed (see [STORE_LOGIN](STORE_LOGIN.md)) |
+| Synty Store: login, purchase listing, download | **verified on the owner’s real account** | Claude Code reported 28 purchased packs, 135 files and four packs downloaded, verified, extracted and indexed on 2026-10-13. This follow-up did not repeat network downloads. See [STORE_LOGIN](STORE_LOGIN.md). |
 | Download resume (`Range`) | not tested | depends on the store's signed links |
 | Live SyntyDex | **intentionally not implemented** | no documented API; only the local export remains |
 | Dashboard in a browser | **tested in Chrome with synthetic data** | login, search, details, 3D viewer (GLB loaded, 6.00 × 5.00 × 7.00 m measured by three.js), scene, packs, collection (zip + manifest), jobs. Not tried with real Synty packs, to avoid viewing their images |
 | Claude Code with `configs/claude-code.mcp.json` | not run | standard `.mcp.json` format; the stdio server is tested with an equivalent real MCP client |
 | Grok (`configs/grok_remote_mcp.py`) | **not tested** | needs an xAI key and a public server; check against current xAI docs |
-| Real `.unitypackage` packs (real Synty prefabs + `.mat`) | tested with synthetic fixtures only | no real Unity packs were on disk; GUIDs/`.mat` follow the Unity format |
-| Real ANIMATION / INTERFACE / SIDEKICK / FX packs | not tested | none available during development |
+| Real `.unitypackage` packs (real Synty prefabs + `.mat`) | tested with synthetic fixtures only | synthetic fixtures cover GUIDs/`.mat`; Claude Code subsequently downloaded and indexed real packs, but detailed real-prefab coverage has not been established |
+| Real ANIMATION / INTERFACE / SIDEKICK / FX packs | ANIMATION conversion verified; other categories not tested | Goblin Locomotion was downloaded and used with real characters. INTERFACE / SIDEKICK / FX pack coverage remains unverified. |
 | Godot: import in the editor | not tested | GLBs are valid glTF without Draco; the `.tscn` uses the standard format 3 |
 
 ## Known limitations
@@ -67,3 +67,9 @@ by Blender at test time. The repository contains no Synty files.
 - During development a render of one real Synty asset was opened **once** to check texture assignment, so that
   image passed through the AI model writing the code. From then on previews were verified numerically only
   (dimensions, pixel coverage), without viewing them.
+
+## Follow-up verification (2026-10-13)
+
+The full suite was rerun with Blender: 80 passed, one live test skipped. The live Source Files test was then run separately and passed. Two store parser/privacy regression tests were added afterward. Browser listing errors and downloader fallback errors are sanitized before they reach job logs, and login hints do not print private URLs.
+
+Claude Code’s local session also reports a complete real-account workflow: store sync, four downloaded packs, Italian scene search, and a collection of 26 GLBs exported into a private Three.js demo. Those assets and session files remain ignored and are not part of this repository.

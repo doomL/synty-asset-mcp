@@ -96,6 +96,12 @@ def score_asset(item: dict, pack_id: str, asset: dict, base: float = 0.0) -> tup
         elif any(re.search(rf"\b{re.escape(t)}", desc) for t in terms[:3]):
             s += 6
             why.append("description")
+        elif canon in id_tokens(pack_id) and (
+                not item.get("wants_character") or asset_class(asset) == "character"):
+            # "goblin" assets of POLYGON_Goblin_War_Camp are SM_Chr_Archer_01 etc.:
+            # the pack name carries the meaning.
+            s += 22
+            why.append(f"pack:{canon}")
         else:
             return 0.0, []
     for q in item.get("qualifiers") or []:
@@ -199,13 +205,15 @@ class Searcher:
         }
 
     def row(self, pack_id: str, asset: dict, score: float | None = None, why: list[str] | None = None) -> dict:
-        bounds = asset.get("bounds") or {}
+        # Our conversion measurement wins: synty-inventory's GLB measure ignores skinning.
+        bounds = {}
+        conv = self.ctx.db.one("SELECT info FROM conversions WHERE pack_id=? AND asset_id=? AND status='ok' "
+                               "ORDER BY created_at DESC", (pack_id, asset["id"]))
+        gb = (loads(conv["info"], {}).get("glb") or {}).get("bounds") if conv else None
+        if gb:
+            bounds = {"size": gb["size"], "source": "converted_glb"}
         if not bounds.get("size"):
-            conv = self.ctx.db.one("SELECT info FROM conversions WHERE pack_id=? AND asset_id=? AND status='ok' "
-                                   "ORDER BY created_at DESC", (pack_id, asset["id"]))
-            gb = (loads(conv["info"], {}).get("glb") or {}).get("bounds") if conv else None
-            if gb:
-                bounds = {"size": gb["size"], "source": "converted_glb"}
+            bounds = asset.get("bounds") or {}
         pack = self.ctx.db.one("SELECT slug, line, name FROM packs WHERE pack_id=?", (pack_id,))
         out = {
             "ref": f"{pack_id}/{asset['id']}",
@@ -267,6 +275,15 @@ class Searcher:
                 continue
             scored.append((s, pid, a, why))
         scored.sort(key=lambda r: (-r[0], r[1], r[2]["id"]))
+        if not scored and item.get("qualifiers"):
+            # "guardia cavaliere": nothing is a "guard", but the qualifier ("knight") may be.
+            q0, rest = item["qualifiers"][0], item["qualifiers"][1:]
+            alt = dict(item, concept=q0, qualifiers=rest,
+                       wants_character=q0 in lexicon.CHARACTER_CONCEPTS or item.get("wants_character"))
+            res = self.search(query, pack=pack, asset_class_filter=asset_class_filter, available_only=available_only,
+                              include_nonplaceable=include_nonplaceable, limit=limit, item=alt)
+            res["understood"]["fallback_concept"] = q0
+            return res
         rows = []
         for s, pid, a, why in scored:
             r = self.row(pid, a, s, why)

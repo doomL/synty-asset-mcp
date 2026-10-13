@@ -16,7 +16,7 @@ from ..db import StateDB, dumps, loads, now
 from ..glbinfo import glb_info
 from ..safepaths import safe_name
 
-CONVERTER_VERSION = 4
+CONVERTER_VERSION = 5
 JOB_SCRIPT = Path(__file__).with_name("blender_job.py")
 
 PRESETS: dict[str, dict] = {
@@ -180,6 +180,16 @@ class Converter:
             out.parent.mkdir(parents=True, exist_ok=True)
             os.replace(tmp_out, out)
             info = glb_info(out) or {}
+            bb = rep.get("bounds") or {}
+            if info.get("skins") and bb.get("min_zup"):
+                # Accessor bounds ignore skinning (a 0.01-scaled rig reads 100x too small):
+                # use Blender's evaluated world bounds, converted Z-up -> glTF Y-up.
+                mn, mx = bb["min_zup"], bb["max_zup"]
+                ymin = [mn[0], mn[2], -mx[1]]
+                ymax = [mx[0], mx[2], -mn[1]]
+                info["bounds"] = {"min": [round(v, 4) for v in ymin], "max": [round(v, 4) for v in ymax],
+                                  "size": [round(ymax[i] - ymin[i], 4) for i in range(3)], "units": "m",
+                                  "up": "+y", "source": "blender_evaluated"}
             record = {
                 "preset": preset,
                 "params": params,

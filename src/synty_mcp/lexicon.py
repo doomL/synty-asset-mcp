@@ -32,7 +32,12 @@ CONCEPTS: dict[str, list[str]] = {
     "door": ["door", "gate"],
     "window": ["window"],
     "roof": ["roof"],
-    "floor": ["floor", "tile"],
+    "floor": ["floor", "ground", "tile", "plank", "dirt", "platform"],
+    "key": ["key", "keys"],
+    "lever": ["lever", "switch", "handle"],
+    "gold": ["gold", "coin", "coins", "treasure", "gem", "gems"],
+    "cage": ["cage", "gibbet", "jail", "prison", "cell"],
+    "plate": ["plate", "pressure", "button", "pad"],
     "stairs": ["stairs", "stair", "steps", "staircase", "ladder"],
     "well": ["well", "water_well"],
     "fountain": ["fountain"],
@@ -172,6 +177,11 @@ _it("gate", "cancello", "cancelli", "portone")
 _it("door", "porta", "porte")
 _it("window", "finestra", "finestre")
 _it("roof", "tetto", "tetti")
+_it("key", "chiave", "chiavi")
+_it("lever", "leva", "leve", "levetta", "interruttore")
+_it("gold", "oro", "moneta", "monete", "soldi", "gemma", "gemme")
+_it("cage", "gabbia", "gabbie", "prigione", "cella", "celle")
+_it("plate", "pedana", "pedane", "piastra", "pulsante_a_pressione")
 _it("floor", "pavimento", "pavimenti")
 _it("stairs", "scala", "scale", "scalinata", "gradini")
 _it("well", "pozzo", "pozzi")

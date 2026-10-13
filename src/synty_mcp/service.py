@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
@@ -19,7 +20,7 @@ from .inventory import CatalogCache
 from .jobs import JobManager
 from .safepaths import PathViolation, confine, safe_name
 from .search import Searcher, asset_class
-from .store import StoreUnavailable, SyntyStore
+from .store import SyntyStore
 from .syntydex import SyntyDexProvider
 
 LICENCE_NOTE = (
@@ -109,22 +110,26 @@ class Service:
                 "no owned_packs.yaml: packs are discovered from Synty Store downloads and imported archives",
                 "note": "assets are only listed for packs with status 'indexed'"}
 
-    def sync_owned_packs(self) -> dict:
+    def sync_owned_packs(self, wait: bool = True, timeout: float = 900) -> dict:
         imported = library.import_inbox(self.settings, self.db, log=lambda *_: None)
         store = self.store.status()
-        listed: list[dict] | None = None
-        store_error = None
+
+        def work(ctx):
+            listed = self.store.list_purchases(log=ctx.log, progress=ctx.progress)
+            by_pack: dict[str, list] = {}
+            for f in listed:
+                by_pack.setdefault(f["pack"] or "_unmatched", []).append(
+                    {k: f[k] for k in ("link_ref", "kind", "variant", "size_bytes")})
+            return {"purchased_packs": len(by_pack), "files": len(listed), "by_pack": by_pack}
+
+        job = None
         if store["available"]:
-            try:
-                listed = self.store.list_purchases(log=lambda *_: None)
-            except StoreUnavailable as exc:
-                store_error = str(exc)
+            job = self._wait(self.jobs.submit("sync_store", {}, work, dedupe_key="sync_store"), wait, timeout)
         owned = self.list_owned_packs()
         return {
             "inbox_imports": imported,
-            "store": {**store, "error": store_error,
-                      "purchases_found": len(listed) if listed is not None else None},
-            "unmatched_store_items": [i for i in (listed or []) if not i["pack"]],
+            "store": store,
+            "store_sync": job,
             "packs": [{k: p[k] for k in ("pack", "name", "status", "indexed_assets")} for p in owned["packs"]],
             "by_status": owned["by_status"],
         }
@@ -141,10 +146,18 @@ class Service:
                                      f"then call sync_owned_packs"}
         items = self.db.q("SELECT * FROM store_items WHERE pack_slug=?", (row["slug"],))
         want = set(kinds or ["unity", "source"])
-        items = [i for i in items if (i["kind"] in want or i["kind"] == "unknown")]
+        # One file per kind: the newest pack version, then the newest engine version.
+        best: dict[str, dict] = {}
+        for it in items:
+            if it["kind"] not in want:
+                continue
+            key = _version_key(it.get("variant") or it.get("filename") or "")
+            if it["kind"] not in best or key > _version_key(best[it["kind"]].get("variant") or ""):
+                best[it["kind"]] = it
+        items = list(best.values())
         if not items:
             return {"status": "no_store_links", "pack": row["slug"],
-                    "hint": "run sync_owned_packs; if the pack still has no links its title did not match"}
+                    "hint": "run sync_owned_packs; if the pack still has no files its title did not match"}
         pending = [i for i in items if not i["archive_id"]]
         if not pending:
             return {"status": "already_downloaded", "pack": row["slug"],
@@ -594,6 +607,13 @@ class Service:
 
     def list_jobs(self, status: str | None = None, limit: int = 30) -> dict:
         return {"jobs": self.jobs.list(status, limit)}
+
+
+def _version_key(variant: str) -> tuple:
+    """'Unity_2022_3 | v1_0_1' -> ((1, 0, 1), (2022, 3)) for "newest first" selection."""
+    left, _, right = variant.partition("|")
+    nums = lambda t: tuple(int(x) for x in re.findall(r"\d+", t))  # noqa: E731
+    return (nums(right), nums(left))
 
 
 def godot_wrapper(node_name: str, glb_res_path: str) -> str:
