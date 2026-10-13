@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "synty": {
+      "command": "/ABSOLUTE/PATH/synty-asset-mcp/.venv/bin/synty-mcp",
+      "args": ["serve"],
+      "env": { "SYNTY_MCP_CONFIG": "/ABSOLUTE/PATH/synty-asset-mcp/config.yaml" }
+    },
+    "synty-remote": {
+      "type": "http",
+      "url": "https://synty.example.com/mcp",
+      "headers": { "Authorization": "Bearer ${SYNTY_TOKEN}" }
+    }
+  }
+}

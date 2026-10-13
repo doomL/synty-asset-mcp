@@ -1,0 +1,17 @@
+Synty Asset MCP
+Copyright 2026 doomL
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This project depends on synty-inventory (https://github.com/tom-swift-tech/synty-inventory),
+Copyright 2026 Tom Swift, Apache License 2.0, used unmodified as a library.
+
+Third-party assets
+------------------
+This repository contains only original software, documentation and synthetic
+test fixtures generated at test time. It does not include Synty Studios meshes,
+textures, materials, prefabs, packages, previews or generated catalogs.
+
+Synty, POLYGON, SIMPLE and SIDEKICK are trademarks of Synty Studios Limited.
+This project is not affiliated with, endorsed by, or sponsored by Synty Studios.
+Users must license Synty packs separately and follow the Synty EULA.

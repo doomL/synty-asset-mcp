@@ -1,0 +1,42 @@
+# synty-mcp configuration. Every key can also be set as SYNTY_MCP_<KEY> (upper case).
+# Relative paths are resolved against this file's folder.
+
+data_dir: ./data              # archives/, inbox/, library/, catalogs/, converted/, previews/, collections/, secrets/
+
+# Already-extracted folders that may be registered and scanned IN PLACE (read-only).
+source_roots: []
+#  - /home/me/games/my-godot-project        # e.g. contains Source_Files/ of a pack
+
+# Folders prepare_asset_collection / prepare_asset_for_godot may export into (your game projects).
+export_roots: []
+#  - /home/me/games/my-threejs-game/public/assets
+#  - /home/me/games/my-godot-project/synty
+
+owned_packs_file: null          # your owned-packs list; default <data_dir>/owned_packs.yaml, else the packaged example
+
+blender: null                 # path to blender; default: $SYNTY_MCP_BLENDER, $BLENDER or `blender` on PATH
+blender_timeout_s: 600
+workers: 2                    # parallel background jobs (each conversion runs one Blender process)
+
+# HTTP (synty-mcp serve --transport http)
+host: 127.0.0.1
+port: 8765
+public_base_url: null         # e.g. https://synty.example.com  (used for download URLs + allowed Host)
+tokens: []                    # "sha256:<hex>" (from `synty-mcp token`) or plain tokens; required for HTTP
+allowed_hosts: []
+allow_unauthenticated_localhost: false
+
+# Licence posture: never push preview images into the agent's context unless you decide otherwise.
+allow_preview_images_to_agent: false
+
+# Extraction limits
+max_extract_bytes: 42949672960   # 40 GiB
+max_extract_files: 400000
+
+# Optional providers (off by default; see docs/INTEGRATIONS.md)
+syntydex_enabled: false
+syntydex_export_file: null       # one asset name per line, optionally "Name<TAB>Pack"
+store_enabled: false
+store_downloads_url: null        # copy the URL of your "My Downloads" page after logging in
+store_link_selector: "a[href]"
+store_link_text_regex: "(?i)download|\\.zip|\\.unitypackage"

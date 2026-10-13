@@ -1,0 +1,27 @@
+# Fictional packs used by the test suite only (no real product names).
+packs:
+  - {slug: polygon-hamlet, line: POLYGON, name: Hamlet, pack_id: POLYGON_Hamlet,
+     match: [hamlet], exclude: [simple], content: environment, hints: [house, building, shop, tree, fence]}
+  - {slug: polygon-starport, line: POLYGON, name: Starport, pack_id: POLYGON_Starport,
+     match: [starport], content: environment, hints: [spaceship, ship, station, alien, sci-fi]}
+  - {slug: polygon-legends-characters, line: POLYGON, name: Legends Characters, pack_id: POLYGON_Legends_Characters,
+     match: [legends, characters], content: characters, hints: [character, knight, wizard]}
+  - {slug: polygon-mini-legends-characters, line: POLYGON MINI, name: Legends Characters,
+     pack_id: POLYGON_Mini_Legends_Characters, match: [mini, legends, characters], content: characters,
+     hints: [character, goblin, npc]}
+  - {slug: polygon-mini-legends, line: POLYGON MINI, name: Legends, pack_id: POLYGON_Mini_Legends,
+     match: [mini, legends], content: environment, hints: [house, castle, tree]}
+  - {slug: polygon-corsair, line: POLYGON, name: Corsair, pack_id: POLYGON_Corsair,
+     match: [corsair], alt_match: [[corsairs]], content: environment, hints: [ship, cannon, barrel]}
+  - {slug: polygon-metro, line: POLYGON, name: Metro, pack_id: POLYGON_Metro,
+     match: [metro], content: environment, hints: [building, car, road]}
+  - {slug: polygon-metro-characters, line: POLYGON, name: Metro Characters, pack_id: POLYGON_Metro_Characters,
+     match: [metro, characters], content: characters, hints: [character, npc]}
+  - {slug: simple-hamlet, line: SIMPLE, name: Hamlet, pack_id: SIMPLE_Hamlet,
+     match: [simple, hamlet], content: environment, hints: [house]}
+  - {slug: animation-test-locomotion, line: ANIMATION, name: Test Locomotion, pack_id: ANIMATION_Test_Locomotion,
+     match: [test, locomotion], content: animation, hints: [animation, walk]}
+  - {slug: interface-test-hud, line: INTERFACE, name: Test HUD, pack_id: INTERFACE_Test_HUD,
+     match: [test, hud], content: ui, hints: [hud, ui]}
+  - {slug: sidekick-test-crew, line: SIDEKICK, name: Test Crew, pack_id: SIDEKICK_Test_Crew,
+     match: [sidekick, crew], content: characters, hints: [character]}

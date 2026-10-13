@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.pytest_tmp/
+.ruff_cache/
+# Never commit Synty content, catalogs, sessions or local config
+/data/
+/inbox/
+*.unitypackage
+*.fbx
+*.glb
+*.gltf
+*.zip
+.env
+config.yaml
+!examples/config.example.yaml

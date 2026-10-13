@@ -1,0 +1,49 @@
+# EXAMPLE pack list (a template, not anybody's purchases).
+#
+# You normally do not need this file: owned packs are discovered from Synty
+# Store downloads and from imported archive names. Copy it to
+# <data_dir>/owned_packs.yaml (or set `owned_packs_file`) only if you want to
+# pre-declare packs, e.g. to get "probably in pack X, not indexed yet" hints
+# before downloading. Your own list is local configuration: keep it out of git.
+#
+# `slug` is this server's stable key. `pack_id` is only a *guess* at Synty's
+# own folder/file naming: the real id is learned from the archive filename when
+# a pack is imported, and replaces the guess. `match` lists the tokens that must
+# all appear in an archive filename (case/camel-insensitive) to attach it to
+# this pack; the longest matching token set wins. `alt_match` adds alternative
+# token sets and `exclude` vetoes a match.
+#
+# `hints` are *expectations* used only to say "this pack probably contains X,
+# but it is not indexed yet" — never presented as indexed assets.
+# `content`: environment | characters | animation | ui | fx | icons.
+packs:
+  - {slug: polygon-city, line: POLYGON, name: City, pack_id: POLYGON_City,
+     match: [city], exclude: [scifi], content: environment,
+     hints: [building, shop, car, road, street, sign, lamp, bench, modern]}
+  - {slug: polygon-scifi-city, line: POLYGON, name: Sci-Fi City, pack_id: POLYGON_SciFi_City,
+     match: [scifi, city], content: environment,
+     hints: [building, sign, neon, vehicle, street, sci-fi]}
+  - {slug: polygon-starter, line: POLYGON, name: Starter, pack_id: POLYGON_Starter,
+     match: [starter], exclude: [sidekick], content: environment,
+     hints: [house, tree, rock, fence, crate, barrel]}
+  - {slug: polygon-military, line: POLYGON, name: Military, pack_id: POLYGON_Military,
+     match: [military], content: environment,
+     hints: [tank, truck, crate, sandbag, tent, soldier, weapon]}
+  - {slug: polygon-heist, line: POLYGON, name: Heist, pack_id: POLYGON_Heist,
+     match: [heist], content: environment,
+     hints: [vault, bank, safe, money, car, character]}
+  - {slug: polygon-mech, line: POLYGON, name: Mech, pack_id: POLYGON_Mech,
+     match: [mech], content: environment,
+     hints: [mech, robot, weapon, cockpit]}
+  - {slug: polygon-coffee-shop, line: POLYGON, name: Coffee Shop, pack_id: POLYGON_Coffee_Shop,
+     match: [coffee], content: environment,
+     hints: [table, chair, counter, cup, interior, shop]}
+  - {slug: animation-base-locomotion, line: ANIMATION, name: Base Locomotion, pack_id: ANIMATION_Base_Locomotion,
+     match: [base, locomotion], content: animation,
+     hints: [animation, walk, run, idle]}
+  - {slug: interface-scifi-soldier-hud, line: INTERFACE, name: Sci-Fi Soldier HUD, pack_id: INTERFACE_SciFi_Soldier_HUD,
+     match: [soldier, hud], content: ui,
+     hints: [hud, ui, button, icon, health, bar]}
+  - {slug: sidekick-starter, line: SIDEKICK, name: Starter, pack_id: SIDEKICK_Starter,
+     match: [sidekick, starter], content: characters,
+     hints: [character, modular, npc]}

@@ -1,0 +1,15 @@
+# Merge into ~/.codex/config.toml
+
+# Local (stdio)
+[mcp_servers.synty]
+command = "/ABSOLUTE/PATH/synty-asset-mcp/.venv/bin/synty-mcp"
+args = ["serve"]
+env = { SYNTY_MCP_CONFIG = "/ABSOLUTE/PATH/synty-asset-mcp/config.yaml" }
+startup_timeout_sec = 30
+tool_timeout_sec = 600          # conversions/collections can take a while
+
+# Remote (Streamable HTTP). Export SYNTY_TOKEN in the shell that starts codex.
+[mcp_servers.synty_remote]
+url = "https://synty.example.com/mcp"
+bearer_token_env_var = "SYNTY_TOKEN"
+tool_timeout_sec = 600

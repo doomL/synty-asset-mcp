@@ -1,0 +1,301 @@
+{
+  "schema": "synty-mcp/collection.v1",
+  "name": "fantasy_village",
+  "created_at": "2026-10-13T14:35:59+00:00",
+  "engine": "threejs",
+  "preset": "threejs_web",
+  "units": "meters",
+  "up_axis": "+y",
+  "forward_axis": "+z (glTF convention)",
+  "loader_hint": "GLTFLoader",
+  "assets": [
+    {
+      "ref": "POLYGON_FakeVillage/SM_Bld_House_Medieval_01",
+      "id": "SM_Bld_House_Medieval_01",
+      "name": "House Medieval",
+      "pack_id": "POLYGON_FakeVillage",
+      "class": "prefab",
+      "type": "building/module",
+      "count": 3,
+      "file": "models/POLYGON_FakeVillage__SM_Bld_House_Medieval_01.glb",
+      "bytes": 2308,
+      "triangles": 12,
+      "vertices": 24,
+      "bounds_m": {
+        "min": [
+          -23.0,
+          -0.0,
+          -3.5
+        ],
+        "max": [
+          -17.0,
+          5.0,
+          3.5
+        ],
+        "size": [
+          6.0,
+          5.0,
+          7.0
+        ],
+        "units": "m",
+        "up": "+y"
+      },
+      "materials": [
+        "PolygonFakeVillage_Mat_01_A"
+      ],
+      "animations": [],
+      "skinned": false,
+      "extensions_required": [],
+      "conversion_warnings": [],
+      "placement": {
+        "mount": "ground",
+        "height": "grade",
+        "orientation": "street_face_plus_z",
+        "attachment": "base_to_ground",
+        "preferred_floors": [
+          1
+        ],
+        "constraints": [
+          "snap_to_grid",
+          "do_not_scale"
+        ],
+        "preferred_contexts": [
+          "residential_block"
+        ]
+      },
+      "kit": {
+        "family": "House",
+        "role": "misc",
+        "footprint_class": null,
+        "stackable_on": [],
+        "street_side": "+z",
+        "blank_sides": [],
+        "sign_zones": []
+      }
+    },
+    {
+      "ref": "POLYGON_FakeVillage/SM_Prop_Well_01",
+      "id": "SM_Prop_Well_01",
+      "name": "Well",
+      "pack_id": "POLYGON_FakeVillage",
+      "class": "prefab",
+      "type": "prop",
+      "count": 1,
+      "file": "models/POLYGON_FakeVillage__SM_Prop_Well_01.glb",
+      "bytes": 2352,
+      "triangles": 12,
+      "vertices": 24,
+      "bounds_m": {
+        "min": [
+          -0.8,
+          -0.0,
+          -0.8
+        ],
+        "max": [
+          0.8,
+          1.2,
+          0.8
+        ],
+        "size": [
+          1.6,
+          1.2,
+          1.6
+        ],
+        "units": "m",
+        "up": "+y"
+      },
+      "materials": [
+        "PolygonFakeVillage_Mat_01_A"
+      ],
+      "animations": [],
+      "skinned": false,
+      "extensions_required": [],
+      "conversion_warnings": [],
+      "placement": {
+        "mount": "ground",
+        "height": "grade",
+        "orientation": "upright",
+        "attachment": "base_to_ground",
+        "preferred_floors": [
+          1
+        ],
+        "constraints": [
+          "sit_on_ground"
+        ],
+        "preferred_contexts": []
+      },
+      "kit": null
+    },
+    {
+      "ref": "POLYGON_FakeVillage/SM_Env_Tree_Pine_01",
+      "id": "SM_Env_Tree_Pine_01",
+      "name": "Tree Pine",
+      "pack_id": "POLYGON_FakeVillage",
+      "class": "prefab",
+      "type": "environment",
+      "count": 2,
+      "file": "models/POLYGON_FakeVillage__SM_Env_Tree_Pine_01.glb",
+      "bytes": 2292,
+      "triangles": 12,
+      "vertices": 24,
+      "bounds_m": {
+        "min": [
+          -1.0,
+          -0.0,
+          -1.0
+        ],
+        "max": [
+          1.0,
+          8.0,
+          1.0
+        ],
+        "size": [
+          2.0,
+          8.0,
+          2.0
+        ],
+        "units": "m",
+        "up": "+y"
+      },
+      "materials": [
+        "PolygonFakeVillage_Mat_01_A"
+      ],
+      "animations": [],
+      "skinned": false,
+      "extensions_required": [],
+      "conversion_warnings": [],
+      "placement": {
+        "mount": "ground",
+        "height": "grade",
+        "orientation": "upright",
+        "attachment": "base_to_ground",
+        "preferred_floors": [
+          1
+        ],
+        "constraints": [
+          "sit_on_ground"
+        ],
+        "preferred_contexts": [
+          "park",
+          "street"
+        ]
+      },
+      "kit": null
+    },
+    {
+      "ref": "POLYGON_FakeVillage/SM_Prop_Chair_01",
+      "id": "SM_Prop_Chair_01",
+      "name": "Chair",
+      "pack_id": "POLYGON_FakeVillage",
+      "class": "prefab",
+      "type": "prop",
+      "count": 5,
+      "file": "models/POLYGON_FakeVillage__SM_Prop_Chair_01.glb",
+      "bytes": 2316,
+      "triangles": 12,
+      "vertices": 24,
+      "bounds_m": {
+        "min": [
+          -0.25,
+          -0.0,
+          -0.25
+        ],
+        "max": [
+          0.25,
+          0.9,
+          0.25
+        ],
+        "size": [
+          0.5,
+          0.9,
+          0.5
+        ],
+        "units": "m",
+        "up": "+y"
+      },
+      "materials": [
+        "PolygonFakeVillage_Mat_01_A"
+      ],
+      "animations": [],
+      "skinned": false,
+      "extensions_required": [],
+      "conversion_warnings": [],
+      "placement": {
+        "mount": "ground",
+        "height": "grade",
+        "orientation": "upright",
+        "attachment": "base_to_ground",
+        "preferred_floors": [
+          1
+        ],
+        "constraints": [
+          "sit_on_ground"
+        ],
+        "preferred_contexts": []
+      },
+      "kit": null
+    },
+    {
+      "ref": "POLYGON_FakeVillage/SK_Chr_Goblin_01",
+      "id": "SK_Chr_Goblin_01",
+      "name": "Goblin",
+      "pack_id": "POLYGON_FakeVillage",
+      "class": "character",
+      "type": "character/skeleton",
+      "count": 1,
+      "file": "models/POLYGON_FakeVillage__SK_Chr_Goblin_01.glb",
+      "bytes": 5540,
+      "triangles": 12,
+      "vertices": 24,
+      "bounds_m": {
+        "min": [
+          -0.3,
+          -0.0,
+          -0.2
+        ],
+        "max": [
+          0.3,
+          1.2,
+          0.2
+        ],
+        "size": [
+          0.6,
+          1.2,
+          0.4
+        ],
+        "units": "m",
+        "up": "+y"
+      },
+      "materials": [
+        "PolygonFakeVillage_Mat_01_A"
+      ],
+      "animations": [
+        "Root|Root|Goblin_Walk"
+      ],
+      "skinned": true,
+      "extensions_required": [],
+      "conversion_warnings": [],
+      "placement": {
+        "mount": "ground",
+        "height": "grade",
+        "orientation": "upright",
+        "attachment": "base_to_ground",
+        "preferred_floors": [
+          1
+        ],
+        "constraints": [
+          "sit_on_ground"
+        ],
+        "preferred_contexts": []
+      },
+      "kit": null
+    }
+  ],
+  "missing": [
+    {
+      "ref": "SM_Prop_Dragon_01",
+      "reason": "asset not found in the indexed catalogs: 'SM_Prop_Dragon_01' (search_assets first)"
+    }
+  ],
+  "licence": "Synty Studios assets licensed to the library owner. Use only inside the owner's own products; do not redistribute source files, do not use for generative-AI datasets or 3D model generation. Respect the seat count of your licence."
+}

@@ -1,0 +1,52 @@
+# Synty Asset MCP on a VPS.
+#
+#   cp .env.example .env            # set SYNTY_MCP_TOKENS and SYNTY_MCP_PUBLIC_BASE_URL
+#   docker compose up -d --build
+#
+# The port is bound to 127.0.0.1 only: publish it through a TLS reverse proxy
+# (Caddy/nginx/Traefik) or an SSH tunnel / Tailscale. The server itself also
+# refuses to start without tokens.
+services:
+  synty-mcp:
+    build:
+      context: .
+      args:
+        WITH_PLAYWRIGHT: "${WITH_PLAYWRIGHT:-0}"
+    image: synty-asset-mcp:latest
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SYNTY_MCP_DATA_DIR: /data
+      SYNTY_MCP_HOST: 0.0.0.0
+      SYNTY_MCP_PORT: "8765"
+      SYNTY_MCP_STATE_DB: /data/state/state.sqlite3
+      SYNTY_MCP_PREVIEWS_DIR: /data/state/previews
+      SYNTY_MCP_COLLECTIONS_DIR: /data/state/collections
+      SYNTY_MCP_TMP_DIR: /data/state/tmp
+    ports:
+      - "127.0.0.1:${SYNTY_MCP_HOST_PORT:-8765}:8765"
+    volumes:
+      # One persistent volume per kind of data, so each can live on its own disk.
+      - synty_archives:/data/archives        # original downloads (immutable)
+      - synty_library:/data/library          # extracted packs
+      - synty_converted:/data/converted      # GLB cache (shared by every agent)
+      - synty_catalogs:/data/catalogs        # synty-inventory catalogs + search.db
+      - synty_state:/data/state              # SQLite state, previews, collections
+      - synty_secrets:/data/secrets          # store session (never served)
+      - ./inbox:/data/inbox                  # drop purchased .zip/.unitypackage here
+    command: ["serve", "--transport", "http"]
+    # Conversions run Blender; give it room but cap runaway jobs.
+    deploy:
+      resources:
+        limits:
+          memory: 6g
+
+volumes:
+  synty_archives:
+  synty_library:
+  synty_converted:
+  synty_catalogs:
+  synty_state:
+  synty_secrets:

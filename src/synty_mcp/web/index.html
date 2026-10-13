@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Synty Asset Library</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+  {"imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }}
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Synty Asset Library</h1>
+    <nav>
+      <button data-tab="search" class="active">Search</button>
+      <button data-tab="scene">Scene</button>
+      <button data-tab="packs">Packs</button>
+      <button data-tab="collection">Collection <span id="sel-count">0</span></button>
+      <button data-tab="jobs">Jobs</button>
+    </nav>
+    <div id="status-line" class="muted"></div>
+  </header>
+
+  <section id="login" hidden>
+    <form id="login-form">
+      <label>Access token <input type="password" id="token" autocomplete="current-password" required></label>
+      <button type="submit">Sign in</button>
+      <p class="muted">The token is kept in an HttpOnly cookie in this browser.</p>
+    </form>
+  </section>
+
+  <main id="app" hidden>
+    <section id="tab-search" class="tab active">
+      <form id="search-form" class="toolbar">
+        <input id="q" placeholder="e.g. medieval house, wooden chair, goblin…" autofocus>
+        <select id="f-class">
+          <option value="">All classes</option>
+          <option>model</option><option>prefab</option><option>character</option><option>animation</option>
+          <option>effect</option><option>ui</option><option>texture</option>
+        </select>
+        <select id="f-pack"><option value="">All packs</option></select>
+        <label class="check"><input type="checkbox" id="f-avail"> available only</label>
+        <button type="submit">Search</button>
+      </form>
+      <div class="split">
+        <div id="results" class="list"></div>
+        <aside id="detail" class="panel"><p class="muted">Select an asset.</p></aside>
+      </div>
+    </section>
+
+    <section id="tab-scene" class="tab">
+      <form id="scene-form" class="toolbar">
+        <input id="scene-q" placeholder="three medieval houses, a well, two trees, five chairs and a goblin character">
+        <button type="submit">Suggest</button>
+      </form>
+      <div id="scene-out"></div>
+    </section>
+
+    <section id="tab-packs" class="tab">
+      <div class="toolbar">
+        <select id="pack-status">
+          <option value="">All statuses</option>
+          <option>indexed</option><option>extracted</option><option>downloaded</option><option>owned_not_downloaded</option>
+        </select>
+      </div>
+      <div id="packs" class="grid"></div>
+    </section>
+
+    <section id="tab-collection" class="tab">
+      <div class="toolbar">
+        <input id="col-name" value="my_scene" aria-label="Collection name">
+        <select id="col-preset">
+          <option>threejs_web</option><option>threejs_mobile</option><option>godot4</option><option>original_quality</option>
+        </select>
+        <select id="col-engine"><option value="threejs">Three.js</option><option value="godot">Godot 4</option></select>
+        <button id="col-go">Prepare collection</button>
+        <button id="col-clear" class="ghost">Clear</button>
+      </div>
+      <div id="col-list" class="list"></div>
+      <pre id="col-out" class="log"></pre>
+    </section>
+
+    <section id="tab-jobs" class="tab">
+      <div id="jobs" class="list"></div>
+    </section>
+  </main>
+
+  <dialog id="viewer-dlg">
+    <div class="viewer-head">
+      <strong id="viewer-title"></strong>
+      <span id="viewer-dims" class="muted"></span>
+      <button id="viewer-close" class="ghost">Close</button>
+    </div>
+    <div id="viewer"></div>
+    <p class="muted small">Reference: 1.8 m tall figure. 1 m grid.</p>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
