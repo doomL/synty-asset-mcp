@@ -1,7 +1,8 @@
 """Store parsing and privacy checks with synthetic URLs, without a real account."""
 import traceback
-from synty_mcp.store import SyntyStore, StoreUnavailable, parse_file_blocks, file_kind
+
 from synty_mcp.service import _version_key
+from synty_mcp.store import StoreUnavailable, SyntyStore, file_kind, parse_file_blocks
 
 
 def test_real_layout_parser_and_version_order():

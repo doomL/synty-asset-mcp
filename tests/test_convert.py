@@ -54,6 +54,10 @@ def test_animation_and_skin_preserved(indexed_pack_real):
     assert res["status"] == "done", res
     g = res["result"]["glb"]
     assert g["animations"] and g["skins"] == 1
+    details = indexed_pack_real.get_asset_details("SK_Chr_Goblin_01")
+    assert details["content"]["verified"] and details["content"]["animation_count"] == len(g["animations"])
+    assert details["content"]["animations_exported"] is True
+    assert details["provenance"]["asset_ref"].endswith("/SK_Chr_Goblin_01")
     # skinned: bounds come from Blender's evaluated mesh, not from raw accessors
     assert g["bounds"]["source"] == "blender_evaluated"
     assert near(g["bounds"]["size"], [0.6, 1.2, 0.4], tol=0.05)
@@ -118,6 +122,7 @@ def test_collection_manifest_zip_and_godot_export(indexed_pack_real, tmp_path):
     assert res["status"] == "done", res
     r = res["result"]
     man = json.loads(Path(r["manifest"]).read_text())
+    assert all(a["provenance"]["asset_ref"] == a["ref"] and a["content"]["verified"] for a in man["assets"])
     assert man["units"] == "meters" and man["up_axis"] == "+y" and man["licence"]
     by = {a["id"]: a for a in man["assets"]}
     assert by["SM_Bld_House_Medieval_01"]["count"] == 3
@@ -149,3 +154,53 @@ def test_preview_render(indexed_pack_real):
     assert p["available"] and p["source"] == "rendered"
     data = Path(p["path"]).read_bytes()
     assert data[:8] == b"\x89PNG\r\n\x1a\n" and len(data) > 1000
+
+
+def test_expanded_per_mesh_bindings_do_not_texture_flat_or_missing_slots(svc, tmp_path):
+    """Actual Blender export with one material shared by three differently bound meshes."""
+    import subprocess
+
+    import fixtures
+    from conftest import blender_path
+
+    blender = blender_path()
+    if not blender:
+        pytest.skip("Blender not available")
+    source = tmp_path / "test.blend"
+    script = tmp_path / "make.py"
+    script.write_text(
+        "import bpy\nbpy.ops.wm.read_factory_settings(use_empty=True)\n"
+        "mat=bpy.data.materials.new('Shared');mat.use_nodes=True\n"
+        "for x,name in enumerate(['Painted','Flat','Broken']):\n"
+        " bpy.ops.mesh.primitive_cube_add(size=1,location=(x*2,0,0))\n"
+        " obj=bpy.context.object;obj.name=name;obj.data.materials.append(mat)\n"
+        f"bpy.ops.wm.save_as_mainfile(filepath={str(source)!r})\n"
+    )
+    subprocess.run([blender, '-b', '--python', str(script)], check=True, capture_output=True, timeout=90)
+    atlas = tmp_path / "Atlas.png"
+    atlas.write_bytes(fixtures.png_bytes())
+    def binding(path, state, expected):
+        return {"slots": [path], "slot_states": [state], "expected_textures": [expected]}
+    textures = {"fallback": str(atlas), "by_mesh": {
+        "Painted": binding(str(atlas), "resolved", "Atlas"),
+        "Flat": binding(None, "untextured", None),
+        "Broken": binding(None, "missing", "Missing"),
+    }}
+    converted = svc.converter.convert(pack_id="Synthetic", asset_id="SM_Test", src=source, node=None,
+                                      textures=textures, log=lambda *_: None)
+    by_mesh = {row["mesh"]: row for row in converted["textures"]}
+    assert by_mesh["Painted"]["state"] == "resolved"
+    assert by_mesh["Flat"]["state"] == "untextured" and by_mesh["Flat"]["texture"] is None
+    assert by_mesh["Broken"]["state"] == "missing" and by_mesh["Broken"]["expected_texture"] == "Missing"
+    material_maps = {m["material"]: m["base_color"] for m in converted["glb"]["material_textures"]}
+    assert material_maps[by_mesh["Painted"]["material"]]
+    assert material_maps[by_mesh["Flat"]["material"]] is None
+    assert material_maps[by_mesh["Broken"]["material"]] is None
+    assert converted["warnings"]
+    # Explicitly untextured alone is valid and should not trigger the missing-texture warning.
+    textures["by_mesh"]["Broken"] = binding(None, "untextured", None)
+    valid = svc.converter.convert(pack_id="Synthetic", asset_id="SM_Test", src=source, node=None,
+                                  textures=textures, log=lambda *_: None)
+    assert not valid["warnings"]
+    assert valid["content"]["verified"] and valid["content"]["animation_count"] == 0
+    assert valid["provenance"]["asset_ref"] == "Synthetic/SM_Test"

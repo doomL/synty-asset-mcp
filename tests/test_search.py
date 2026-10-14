@@ -159,3 +159,17 @@ def test_qualifier_fallback(indexed_pack):
     res = indexed_pack.search_assets("guardia pozzo")
     assert res["results"] and res["results"][0]["id"] == "SM_Prop_Well_01"
     assert res["understood"].get("fallback_concept") == "well"
+
+
+def test_material_list_expanded_albedo_format(tmp_path):
+    ml = tmp_path / "MaterialList_Town.txt"
+    ml.write_text("Prefab Name: SM_House\n    Mesh Name: SM_House\n"
+                  "        Slot: Walls\n            Albedo: PolygonTown_01_A.png (_Albedo_Map)\n"
+                  "            Normal: PolygonTown_A_Normals.png (_Normal_Map)\n"
+                  "        Slot: Window\n            Albedo: Window_01.png (_Albedo_Map)\n"
+                  "        Slot: Glass\n            No textures assigned\n")
+    assert unity.parse_material_list(ml)["SM_House"] == [
+        {"material": "Walls", "texture": "PolygonTown_01_A"},
+        {"material": "Window", "texture": "Window_01"},
+        {"material": "Glass", "texture": "", "untextured": True},
+    ]

@@ -169,6 +169,7 @@ def resolve_asset_files(
     models_by_stem: dict[str, Path] = {}
     textures: dict[str, Path] = {}
     material_list: dict[str, list[dict]] = {}
+    material_meshes: dict[str, dict[str, list[dict]]] = {}
     for kind in ("source", "unity", "godot", "other"):
         for t in trees.get(kind, []):
             for p in t.rglob("*"):
@@ -177,6 +178,8 @@ def resolve_asset_files(
                     models_by_stem.setdefault(p.stem.lower(), p)
             textures.update({k: v for k, v in unity.texture_index(t).items() if k not in textures})
             for ml in t.rglob("MaterialList*.txt"):
+                for k, v in unity.parse_material_list_meshes(ml).items():
+                    material_meshes.setdefault(k, v)
                 for k, v in unity.parse_material_list(ml).items():
                     material_list.setdefault(k, v)
     atlas = unity.default_atlas(textures)
@@ -213,18 +216,25 @@ def resolve_asset_files(
             elif node is None:
                 node = aid  # bundle model: keep only this asset's object
         ml = unity.lookup_material_list(material_list, aid, node or "")
+        prefab_slots = bool(slots)
+        resolved_slots = unity.resolve_material_slots(ml, textures) if ml else {}
         if ml:
-            for s in ml:
-                tex = textures.get(s["texture"].lower())
-                if tex:
-                    by_material.setdefault(s["material"], str(tex))
+            for name, path in resolved_slots["by_material"].items():
+                by_material.setdefault(name, path)
             if not slots:
-                slots = [str(textures[s["texture"].lower()]) if s["texture"].lower() in textures else None for s in ml]
+                slots = resolved_slots["slots"]
+        meshes = material_meshes.get(aid) or material_meshes.get(node or "") or next(
+            (v for k, v in material_meshes.items() if unity.norm_name(k) == unity.norm_name(aid)), {})
+        by_mesh = {name: unity.resolve_material_slots(mesh_slots, textures) for name, mesh_slots in meshes.items()} if not prefab_slots else {}
         preview = next((d / f"{aid}.png" for d in preview_dirs if (d / f"{aid}.png").is_file()), None)
         tex_info = {
             "slots": slots,
             "by_material": by_material,
             "fallback": str(atlas) if atlas else None,
+            "slot_states": resolved_slots.get("slot_states", []) if not prefab_slots else [],
+            "material_states": resolved_slots.get("material_states", {}),
+            "expected_textures": resolved_slots.get("expected_textures", []),
+            "by_mesh": by_mesh,
             "search_dirs": sorted({str(p.parent) for p in textures.values()})[:20],
         }
         if mesh_path is not None:

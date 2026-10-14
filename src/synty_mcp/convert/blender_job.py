@@ -149,30 +149,42 @@ def _wire(mat, img):
 
 
 def assign_textures(tex):
-    slots = tex.get("slots") or []
-    by_mat = tex.get("by_material") or {}
-    fallback = tex.get("fallback")
     dirs = tex.get("search_dirs") or []
-    cache = {}
-    report = []
-    done = set()
+    cache, done, report = {}, {}, []
+    by_mesh = tex.get("by_mesh") or {}
     for ob in bpy.context.scene.objects:
         if ob.type != "MESH":
             continue
+        bindings = by_mesh.get(ob.name) or by_mesh.get(ob.data.name)
+        if bindings is None:
+            bindings = next((v for k, v in by_mesh.items() if norm(k) in {norm(ob.name), norm(ob.data.name)}), tex)
+        slots = bindings.get("slots") or []
+        states = bindings.get("slot_states") or []
+        expected = bindings.get("expected_textures") or []
+        by_mat = bindings.get("by_material") or {}
+        mat_states = bindings.get("material_states") or {}
+        fallback = tex.get("fallback")
         for i, slot in enumerate(ob.material_slots):
             mat = slot.material
             if mat is None:
                 mat = bpy.data.materials.new(f"{ob.name}_mat_{i}")
                 slot.material = mat
-            if mat.name in done:
-                continue
-            chosen, how = None, None
-            if mat.name in by_mat or norm(mat.name) in {norm(k) for k in by_mat}:
-                chosen = by_mat.get(mat.name) or next(v for k, v in by_mat.items() if norm(k) == norm(mat.name))
-                how = "material_name"
+            chosen, how, state = None, None, None
+            key = next((k for k in by_mat if k == mat.name), None)
+            if key is None:
+                key = next((k for k in by_mat if norm(k) == norm(mat.name)), None)
+            state_key = next((k for k in mat_states if k == mat.name), None)
+            if state_key is None:
+                state_key = next((k for k in mat_states if norm(k) == norm(mat.name)), None)
+            if key is not None:
+                chosen, how = by_mat[key], "material_name"
+            elif state_key is not None and mat_states[state_key] in ("untextured", "missing"):
+                state = mat_states[state_key]
+            elif i < len(states) and states[i] in ("untextured", "missing"):
+                state = states[i]
             elif i < len(slots) and slots[i]:
                 chosen, how = slots[i], "slot_order"
-            else:
+            if state is None and chosen is None:
                 node = _base_color_image(mat)
                 if node is not None and node.image is not None:
                     fp = bpy.path.abspath(node.image.filepath)
@@ -186,12 +198,26 @@ def assign_textures(tex):
                     chosen, how = slots[0], "single_slot"
                 if chosen is None and fallback:
                     chosen, how = fallback, "pack_atlas_fallback"
-            if chosen and os.path.isfile(chosen):
-                _wire(mat, _image(chosen, cache))
-                report.append({"material": mat.name, "texture": os.path.basename(chosen), "how": how})
-            else:
-                report.append({"material": mat.name, "texture": None, "how": "none"})
-            done.add(mat.name)
+            state = "resolved" if chosen and os.path.isfile(chosen) else state or "unknown"
+            binding = (chosen, state)
+            if mat.name in done and done[mat.name] != binding:
+                # A shared source material can have different per-mesh bindings.
+                # Copy it inside the export rather than rewiring an earlier mesh.
+                mat = mat.copy()
+                slot.material = mat
+            if mat.name not in done:
+                if state == "resolved":
+                    _wire(mat, _image(chosen, cache))
+                elif state in ("untextured", "missing") and mat.use_nodes:
+                    for node in mat.node_tree.nodes:
+                        if node.type == "BSDF_PRINCIPLED":
+                            for link in list(node.inputs["Base Color"].links):
+                                mat.node_tree.links.remove(link)
+                done[mat.name] = binding
+            report.append({"mesh": ob.name, "slot": i, "material": mat.name,
+                           "texture": os.path.basename(chosen) if state == "resolved" else None,
+                           "state": state, "how": how or state,
+                           "expected_texture": expected[i] if i < len(expected) else None})
     return report
 
 
@@ -332,8 +358,10 @@ def run_convert(job):
     if not any(o.type == "MESH" for o in bpy.context.scene.objects) and not bpy.data.actions:
         raise RuntimeError("model contains no mesh and no animation")
     report["textures"] = assign_textures(job.get("textures") or {})
-    if any(t["texture"] is None for t in report["textures"]):
-        report["warnings"].append("some materials have no texture (exported with flat colour)")
+    if any(t["state"] == "missing" for t in report["textures"]):
+        report["warnings"].append("some declared textures are missing (exported with flat colour); inspect material diagnostics")
+    if any(t["state"] == "unknown" for t in report["textures"]):
+        report["warnings"].append("some materials have no verified texture binding; inspect material diagnostics")
     bb = world_bbox()
     scale = float(p.get("scale", 1.0))
     limit = float(job.get("max_plausible_m") or 150.0)

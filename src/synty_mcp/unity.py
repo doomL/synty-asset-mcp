@@ -127,15 +127,12 @@ def material_albedo(mat: Path, guids: dict[str, Path]) -> Path | None:
 
 _ML_PREFAB = re.compile(r"^\s*Prefab Name:\s*(.+?)\s*$")
 _ML_MESH = re.compile(r"^\s*Mesh Name:\s*(.+?)\s*$")
-_ML_SLOT = re.compile(r"^\s*Slot:\s*(.+?)\s*\((.+?)\)\s*$")
+_ML_SLOT = re.compile(r"^\s*Slot:\s*(.+?)(?:\s*\((.+?)\))?\s*$")
+_ML_ALBEDO = re.compile(r"^\s*Albedo:\s*(.+?)\s*\([^)]*\)\s*$")
 
 
-def parse_material_list(path: Path) -> dict[str, list[dict]]:
-    """Synty ``MaterialList_<Pack>.txt``: name -> [{material, texture}] in slot order.
-
-    Keys are both prefab names and mesh names (first definition wins), so a
-    lookup by asset id or by mesh object name both succeed.
-    """
+def parse_material_list_meshes(path: Path) -> dict[str, dict[str, list[dict]]]:
+    """Read compact or expanded material records, preserving per-mesh slots."""
     prefabs: dict[str, dict[str, list[dict]]] = {}
     prefab = None
     mesh = None
@@ -152,7 +149,19 @@ def parse_material_list(path: Path) -> dict[str, list[dict]]:
             continue
         sm = _ML_SLOT.match(line)
         if sm and prefab and mesh:
-            prefabs[prefab][mesh].append({"material": sm.group(1), "texture": sm.group(2)})
+            prefabs[prefab][mesh].append({"material": sm.group(1), "texture": sm.group(2) or ""})
+            continue
+        am = _ML_ALBEDO.match(line)
+        if am and prefab and mesh and prefabs[prefab][mesh]:
+            prefabs[prefab][mesh][-1]["texture"] = Path(am.group(1)).stem
+        if line.strip().lower() == "no textures assigned" and prefab and mesh and prefabs[prefab][mesh]:
+            prefabs[prefab][mesh][-1]["untextured"] = True
+    return prefabs
+
+
+def parse_material_list(path: Path) -> dict[str, list[dict]]:
+    """Asset/mesh lookup for MaterialList; explicit flat slots retain their intent."""
+    prefabs = parse_material_list_meshes(path)
     out: dict[str, list[dict]] = {}
     for meshes in prefabs.values():
         for mname, slots in meshes.items():
@@ -188,6 +197,23 @@ def lookup_material_list(ml: dict[str, list[dict]], *names: str) -> list[dict] |
         if norm_name(k) in wanted:
             return v
     return None
+
+
+def resolve_material_slots(slots: list[dict], textures: dict[str, Path]) -> dict:
+    """Resolve references without treating missing and explicitly flat as equivalent."""
+    paths, states, expected, by_material, material_states = [], [], [], {}, {}
+    for slot in slots:
+        name = slot.get("texture") or ""
+        path = textures.get(name.lower())
+        state = "untextured" if slot.get("untextured") else "resolved" if path else "missing" if name else "unknown"
+        paths.append(str(path) if path else None)
+        states.append(state)
+        expected.append(name or None)
+        material_states[slot["material"]] = state
+        if path and state != "untextured":
+            by_material[slot["material"]] = str(path)
+    return {"slots": paths, "slot_states": states, "expected_textures": expected,
+            "by_material": by_material, "material_states": material_states}
 
 
 def texture_index(root: Path) -> dict[str, Path]:

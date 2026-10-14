@@ -13,10 +13,11 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from ..db import StateDB, dumps, loads, now
+from ..diagnostics import export_content
 from ..glbinfo import glb_info
 from ..safepaths import safe_name
 
-CONVERTER_VERSION = 5
+CONVERTER_VERSION = 6
 JOB_SCRIPT = Path(__file__).with_name("blender_job.py")
 
 PRESETS: dict[str, dict] = {
@@ -199,6 +200,10 @@ class Converter:
                 "warnings": rep.get("warnings"),
                 "blender_stats": rep.get("stats"),
                 "glb": info,
+                "content": export_content(info, params, rep.get("textures")),
+                "provenance": {"asset_ref": f"{pack_id}/{asset_id}", "pack_id": pack_id,
+                               "source_file": src.name, "source_format": src.suffix.lower(),
+                               "node": node, "source_fingerprint": fingerprint(src)},
             }
             self.db.x(
                 "INSERT OR REPLACE INTO conversions(key, pack_id, asset_id, preset, source_path, source_fingerprint,"

@@ -61,3 +61,10 @@
 - Archive members go through `safe_member_path()`. Limits: `max_extract_bytes`, `max_extract_files`.
 - HTTP: token required (also in `sha256:` form); Host header check against DNS rebinding (MCP SDK);
   `/files` limited to `converted|collections|previews|library`; `secrets/` never reachable.
+
+## Application boundary
+
+The MCP owns library discovery, source resolution, conversion, export facts and provenance.
+`diagnostics.py` separates verified export content from catalog hints; `unity.py` preserves source material intent.
+Rig retargeting, animation selection, camera and input behavior belong to consumers. Agent skills can document
+those workflows, but are not required to operate the MCP and are not loaded by the server.

@@ -138,7 +138,8 @@ def build_server(svc: Service) -> MCPServer:
     def get_asset_details(ref: Annotated[str, Field(description="PACK_ID/ASSET_ID (or a unique asset id)")],
                           include_footprint: bool = False) -> dict:
         """Full catalog record (semantics, placement, bounds, kit/part data) plus source files, textures,
-        cached conversions and measured geometry (triangles, materials, bounds)."""
+        cached conversions and measured geometry. content separates verified exported skins/clips
+        and material diagnostics from catalog hints; null facts mean not inspected."""
         return svc.get_asset_details(ref, include_footprint=include_footprint)
 
     @tool(RO)

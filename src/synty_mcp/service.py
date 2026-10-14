@@ -16,6 +16,7 @@ from . import inventory, library, packs
 from .config import Settings
 from .convert import PRESETS, ConversionError, Converter, copy_file, plausible_max_m, resolve_preset
 from .db import StateDB, dumps, loads
+from .diagnostics import export_content
 from .inventory import CatalogCache
 from .jobs import JobManager
 from .safepaths import PathViolation, confine, safe_name
@@ -295,12 +296,19 @@ class Service:
         rec = {k: v for k, v in a.items() if k not in ("_auto", "paths") and (include_footprint or k != "footprint")}
         files = inventory.asset_files(self.db, pid, a["id"]) or {}
         conv = self.db.q("SELECT preset, output_path, info, created_at FROM conversions WHERE pack_id=? AND asset_id=? "
-                         "AND status='ok'", (pid, a["id"]))
+                         "AND status='ok' ORDER BY created_at DESC", (pid, a["id"]))
         conversions = []
+        seen_paths = set()
         for c in conv:
+            if c["output_path"] in seen_paths:
+                continue
+            seen_paths.add(c["output_path"])
             info = loads(c["info"], {})
             conversions.append({"preset": c["preset"], "path": c["output_path"], "url": self.file_url(c["output_path"]),
-                                "glb": info.get("glb"), "warnings": info.get("warnings")})
+                                "glb": info.get("glb"), "warnings": info.get("warnings"),
+                                "content": export_content(info.get("glb") if Path(c["output_path"]).is_file() else None,
+                                                          info.get("params"), info.get("textures")),
+                                "provenance": info.get("provenance")})
         return {
             **self.searcher.row(pid, a),
             "record": rec,
@@ -311,7 +319,9 @@ class Service:
                 "preview": files.get("preview_path"),
                 "textures": (files.get("textures") or {}).get("slots"),
             },
-            "geometry": next((c["glb"] for c in conversions if c.get("glb")), None),
+            "geometry": next((c["glb"] for c in conversions if c["content"]["verified"]), None),
+            "content": next((c["content"] for c in conversions if c["content"]["verified"]), export_content(None)),
+            "provenance": next((c["provenance"] for c in conversions if c["content"]["verified"]), None),
             "conversions": conversions,
             "presets": sorted(PRESETS),
         }
@@ -440,6 +450,7 @@ class Service:
         r = job["result"]
         return {"ref": f"{pid}/{a['id']}", "available": True, "format": "glb", "preset": preset,
                 "path": r["path"], "url": r.get("url"), "glb": r.get("glb"), "warnings": r.get("warnings"),
+                "content": r.get("content"), "provenance": r.get("provenance"),
                 "licence": LICENCE_NOTE}
 
     def get_asset_dependencies(self, ref: str) -> dict:
@@ -454,6 +465,7 @@ class Service:
             "materials": tex.get("by_material") or {},
             "textures_by_slot": tex.get("slots") or [],
             "fallback_atlas": tex.get("fallback"),
+            "material_resolution": {k: tex.get(k) for k in ("slot_states", "material_states", "expected_textures", "by_mesh")},
             "embedded_in_glb": "textures are embedded in converted GLBs; no external files needed",
         }
         module = a.get("module") or {}
@@ -530,6 +542,7 @@ class Service:
                     "bounds_m": g.get("bounds"), "materials": g.get("materials"), "animations": g.get("animations"),
                     "skinned": bool(g.get("skins")), "extensions_required": g.get("extensions_required"),
                     "conversion_warnings": res.get("warnings") or [],
+                    "content": res.get("content"), "provenance": res.get("provenance"),
                     "placement": a.get("placement"), "kit": a.get("module") if (a.get("module") or {}).get("family") else None,
                 }
                 if engine == "godot":

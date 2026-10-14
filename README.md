@@ -10,9 +10,13 @@ extract only what is needed and convert it to a **GLB ready for Three.js** or **
 - Cataloguing and semantics: **[synty-inventory](https://github.com/tom-swift-tech/synty-inventory)**, used as a
   library (dependency pinned to commit `7eee0bc`, original code unmodified).
 - Conversion: **headless Blender** (FBX / OBJ / glTF / GLB → GLB), textures wired from the Unity materials or the
-  Source Files `MaterialList`, metres and +Y up, animations preserved.
+  Source Files `MaterialList` (compact and expanded records), metres and +Y up, animations preserved.
 - Access: **MCP stdio** (local) and **MCP Streamable HTTP** with tokens (remote, several agents at once).
 - Optional **web dashboard** with a Three.js 3D viewer.
+
+The server supplies asset discovery, file conversion and diagnostics. It does not select animation styles,
+retarget characters or implement application controllers. It works independently of any agent skill;
+[synty-threejs](https://github.com/doomL/synty-threejs) is an optional guide for application integration.
 
 > This project contains no Synty assets, generated catalogs or previews. It is not affiliated with Synty Studios.
 > Read [Security and licensing](#security-and-licensing) before exposing it on a network.
@@ -124,7 +128,7 @@ the xAI API's remote MCP tools. Not tested end-to-end: see [TESTING_STATUS](docs
 3. `prepare_asset_collection(refs=[...], preset="threejs_web")` → converts **only** those assets (from the cache if
    already done) and returns a `manifest.json` with files, bytes, triangles, bounds in metres, materials,
    animations and missing items.
-4. The agent places the GLBs in the project according to `bounds_m` (metres, +Y up, base at y=0).
+4. The application uses `bounds_m`, export units and authored pivots when placing the GLBs; skinned armature transforms remain intact.
 
 Missing assets are never invented: they appear under `missing` / `not_found`, together with owned packs that are
 not indexed yet and *probably* contain them (flagged as unverified).
@@ -155,6 +159,31 @@ Full examples of every call: [examples/tool-calls.md](examples/tool-calls.md).
 
 Overridable options: `max_texture`, `image_format`, `draco`, `decimate`, `animations`, `scale`,
 `auto_unit_fix`, `bake_transforms`. Unity shaders, particle systems and components are **not** converted.
+
+### Content and material diagnostics
+
+`get_asset_details` separates catalog classification from inspected export facts in `content`:
+`verified`, `skinned`, `animation_count`, `animation_clips`, `animations_exported` and `material_bindings`.
+Without an available inspected export, skin/clip facts are `null`, not guessed from the pack or file name.
+An exported skinned character can have zero clips. If `animations_exported` is false, an empty list does not
+prove the original source had no animations. An uninspected or unavailable asset is not proof of absence.
+
+Conversion reports retain per-mesh material bindings and use four states:
+
+- `resolved`: a texture file was assigned; `how` records whether it was selected by material, slot, embedded path or atlas fallback.
+- `untextured`: source metadata explicitly says no texture; atlas fallback is suppressed.
+- `missing`: a declared texture could not be resolved; atlas fallback is suppressed and a warning is returned.
+- `unknown`: no texture binding or explicit intent could be verified; the report preserves that uncertainty.
+
+`get_asset_dependencies.material_resolution` exposes the declared slot states, expected texture names and
+per-mesh mappings. After updating the importer, rescan affected packs with `scan_library`; existing resolved
+metadata is not rewritten automatically. Conversions are versioned so cached output from the previous importer
+is regenerated when requested.
+
+Conversion results and collection entries include `content` and `provenance` identifying the source asset,
+file format and source fingerprint (size/mtime identity, not a cryptographic hash). Keep each animation
+asset's provenance separate from the character asset when combining them in an application. The server
+reports exported clips; suitability and cross-rig retargeting remain application responsibilities.
 
 ---
 
