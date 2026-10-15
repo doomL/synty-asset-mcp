@@ -14,7 +14,7 @@ from urllib.parse import quote
 
 from . import inventory, library, packs
 from .config import Settings
-from .convert import PRESETS, ConversionError, Converter, copy_file, plausible_max_m, resolve_preset
+from .convert import PRESETS, ConversionError, Converter, copy_file, plausible_max_m, plausible_min_m, resolve_preset
 from .db import StateDB, dumps, loads
 from .diagnostics import export_content
 from .inventory import CatalogCache
@@ -381,6 +381,23 @@ class Service:
         return out
 
     # ---------------------------------------------------------- conversion
+    def _unit_factor(self, pid: str, mesh_path: Path, log) -> float:
+        """Pack-wide unit correction for the extracted tree ``mesh_path`` lives in (see Converter.unit_factor)."""
+        try:
+            rel = mesh_path.resolve().relative_to(self.settings.library_dir.resolve())
+        except ValueError:
+            return 1.0
+        if len(rel.parts) < 3:
+            return 1.0
+        tree = self.settings.library_dir / rel.parts[0] / rel.parts[1]
+        rows = self.db.q(
+            "SELECT DISTINCT mesh_path FROM asset_files WHERE pack_id=? AND mesh_node IS NULL AND mesh_path LIKE ?"
+            " AND (type LIKE 'building%' OR type LIKE 'vehicle%' OR type LIKE 'environment%')",
+            (pid, f"{tree}/%"))
+        refs = sorted((Path(r["mesh_path"]) for r in rows if Path(r["mesh_path"]).is_file()),
+                      key=lambda p: p.stat().st_size, reverse=True)
+        return self.converter.unit_factor(str(tree), refs, log=log)
+
     def _convert_job(self, pid: str, a: dict, preset: str, options: dict | None, force: bool, refresh: bool = True):
         files = inventory.asset_files(self.db, pid, a["id"])
         if not files or not files.get("mesh_path"):
@@ -396,7 +413,10 @@ class Service:
             res = self.converter.convert(pack_id=pid, asset_id=a["id"], src=Path(files["mesh_path"]),
                                          node=files.get("mesh_node"), textures=files.get("textures") or {},
                                          preset=preset, options=options, force=force,
-                                         max_plausible_m=plausible_max_m(a.get("type")), log=ctx.log)
+                                         max_plausible_m=plausible_max_m(a.get("type")),
+                                         min_plausible_m=plausible_min_m(a.get("type"), a["id"]),
+                                         unit_factor=self._unit_factor(pid, Path(files["mesh_path"]), ctx.log),
+                                         log=ctx.log)
             res["url"] = self.file_url(res["path"])
             if refresh and preset == "threejs_web" and res["status"] == "converted":
                 inventory.write_glb_manifest(self.settings, pid)

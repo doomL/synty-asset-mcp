@@ -5,6 +5,7 @@ Modes (``job["mode"]``):
 * ``convert`` — import FBX/OBJ/glTF/GLB/.blend, optionally keep one node of a
   bundle file, wire textures, optimise, export GLB, write a JSON report.
 * ``preview`` — import a GLB and render a small PNG thumbnail (Cycles CPU).
+* ``measure`` — import each of ``job["inputs"]`` and report its largest dimension.
 
 The source file is only ever *read*. Images are loaded into memory and
 embedded in the GLB; nothing is saved back over the original textures.
@@ -57,6 +58,23 @@ def import_any(path, anim):
                 bpy.context.scene.collection.objects.link(ob)
     else:
         raise RuntimeError(f"unsupported model format: {ext}")
+
+
+HELPER_MESH_RE = re.compile(r"(_shadow|_shadowcaster|_collider|_collision)(_?\d+)?$|^ucx_", re.I)
+
+
+def drop_helper_meshes():
+    """Delete shadow-caster / collision proxies (``SM_Bld_Barracks_01_Shadow``) when a
+    visible mesh remains: engines cast shadows from the real mesh, and Blender's FBX
+    importer can blow these proxies up ~100x, wrecking bounds and the unit check."""
+    meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
+    helpers = [o for o in meshes if HELPER_MESH_RE.search(o.name)]
+    if not helpers or len(helpers) == len(meshes):
+        return []
+    names = [o.name for o in helpers]
+    for o in helpers:
+        bpy.data.objects.remove(o, do_unlink=True)
+    return names
 
 
 def keep_node(node):
@@ -355,6 +373,10 @@ def run_convert(job):
         kept, removed = keep_node(job["node"])
         report["kept_nodes"] = kept
         report["removed_objects"] = removed
+    helpers = drop_helper_meshes()
+    if helpers:
+        report["removed_helpers"] = helpers
+        report["warnings"].append(f"removed shadow/collision proxy meshes: {', '.join(helpers)}")
     if not any(o.type == "MESH" for o in bpy.context.scene.objects) and not bpy.data.actions:
         raise RuntimeError("model contains no mesh and no animation")
     report["textures"] = assign_textures(job.get("textures") or {})
@@ -365,11 +387,19 @@ def run_convert(job):
     bb = world_bbox()
     scale = float(p.get("scale", 1.0))
     limit = float(job.get("max_plausible_m") or 150.0)
-    if p.get("auto_unit_fix", True) and bb and max(bb["size_yup"]) > limit:
+    size = max(bb["size_yup"]) * scale if bb else 0.0
+    if p.get("auto_unit_fix", True) and size > limit:
         # Centimetre-authored file imported without unit scale: a 50 m "stool".
         scale *= 0.01
         report["warnings"].append(
-            f"auto unit fix: max dimension {max(bb['size_yup']):.1f} m > {limit:g} m plausible -> scaled by 0.01")
+            f"auto unit fix: max dimension {size:.1f} m > {limit:g} m plausible -> scaled by 0.01")
+    elif (p.get("auto_unit_fix", True) and job.get("min_plausible_m")
+          and 0 < size < float(job["min_plausible_m"]) and size * 100 <= limit):
+        # Metre geometry in a file that declares centimetres: a 1 cm barrel.
+        scale *= 100.0
+        report["warnings"].append(
+            f"auto unit fix: max dimension {size * 100:.1f} cm < {float(job['min_plausible_m']) * 100:g} cm"
+            " plausible -> scaled by 100")
     apply_scale(scale)
     report["transforms_baked"] = normalize_transforms() if p.get("bake_transforms", True) else False
     report["decimated_objects"] = decimate(float(p.get("decimate", 1.0)))
@@ -425,6 +455,21 @@ def run_preview(job):
     return {"output": job["output"], "size": size}
 
 
+def run_measure(job):
+    """Largest imported dimension (m) of each input, as Blender's importer scales it."""
+    sizes = {}
+    for path in job["inputs"]:
+        reset()
+        try:
+            import_any(path, False)
+        except Exception as exc:  # noqa: BLE001 - one unreadable reference must not sink the probe
+            sizes[path] = {"error": f"{type(exc).__name__}: {exc}"}
+            continue
+        bb = world_bbox()
+        sizes[path] = {"max_m": max(bb["size_yup"]) if bb else None}
+    return {"sizes": sizes}
+
+
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:]
     with open(argv[0], encoding="utf-8") as fh:
@@ -433,6 +478,8 @@ def main():
     try:
         if job.get("mode") == "preview":
             result = {"ok": True, **run_preview(job)}
+        elif job.get("mode") == "measure":
+            result = {"ok": True, **run_measure(job)}
         else:
             result = {"ok": True, **run_convert(job)}
     except Exception as exc:  # noqa: BLE001 - reported to the caller

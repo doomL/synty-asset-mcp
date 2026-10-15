@@ -64,13 +64,55 @@ def model_mesh_names(model: Path) -> dict[str, str]:
     return names
 
 
+DOC_RE = re.compile(r"^--- !u!(\d+) &(-?\d+)", re.MULTILINE)
+GAMEOBJECT_REF_RE = re.compile(r"m_GameObject:\s*\{fileID:\s*(-?\d+)\}")
+
+
+def _documents(text: str) -> list[tuple[str, str, str]]:
+    """(class id, file id, body) for each object of a Unity YAML file."""
+    marks = list(DOC_RE.finditer(text))
+    return [(m.group(1), m.group(2), text[m.end(): marks[i + 1].start() if i + 1 < len(marks) else len(text)])
+            for i, m in enumerate(marks)]
+
+
+def _renderers(text: str) -> tuple[list[str], bool]:
+    """Bodies of the mesh-carrying objects of a prefab (shown ones first) and
+    whether any of them is switched off.
+
+    Synty character prefabs embed every character of the pack's shared
+    ``Characters.fbx`` and switch all but one GameObject off, so document
+    order alone would pick an arbitrary (inactive) character.
+    """
+    docs = _documents(text)
+    active = {fid: not re.search(r"^\s*m_IsActive:\s*0\s*$", body, re.MULTILINE)
+              for cls, fid, body in docs if cls == "1"}
+    # MeshFilter (mesh) and MeshRenderer (materials) are separate objects of one GameObject.
+    parts: dict[str, list[str]] = {}
+    disabled: set[str] = set()
+    for cls, _fid, body in docs:
+        go = GAMEOBJECT_REF_RE.search(body)
+        if cls == "1" or not go:
+            continue
+        parts.setdefault(go.group(1), []).append(body)
+        if cls in ("23", "137") and re.search(r"^\s*m_Enabled:\s*0\s*$", body, re.MULTILINE):
+            disabled.add(go.group(1))  # MeshRenderer / SkinnedMeshRenderer switched off
+    out = []
+    for go, bodies in parts.items():
+        body = "\n".join(bodies)
+        if MESH_REF_RE.search(body):
+            out.append((not active.get(go, True) or go in disabled, body))
+    out.sort(key=lambda r: r[0])  # stable: keeps document order among equals
+    return [body for _hidden, body in out], any(hidden for hidden, _body in out)
+
+
 def prefab_model(prefab: Path, guids: dict[str, Path], depth: int = 0) -> tuple[Path | None, str | None]:
     """(model file, node name inside it) that a prefab renders, or (None, None)."""
     text = _read(prefab)
     if not text:
         return None, None
-    for rx in (MESH_REF_RE, SOURCE_PREFAB_RE):
-        for m in rx.finditer(text):
+    sources = ["\n".join(_renderers(text)[0]) or text, text]
+    for rx, src in zip((MESH_REF_RE, SOURCE_PREFAB_RE), sources):
+        for m in rx.finditer(src):
             file_id, guid = m.group(1), m.group(2).lower()
             target = guids.get(guid)
             if target is None:
@@ -87,7 +129,10 @@ def prefab_model(prefab: Path, guids: dict[str, Path], depth: int = 0) -> tuple[
 
 def prefab_material_paths(prefab: Path, guids: dict[str, Path]) -> list[Path]:
     out: list[Path] = []
-    for g in MATERIAL_REF_RE.findall(_read(prefab)):
+    text = _read(prefab)
+    renderers, some_hidden = _renderers(text)
+    # Only the shown renderer's materials when the prefab carries switched-off variants.
+    for g in MATERIAL_REF_RE.findall(renderers[0] if some_hidden else text):
         p = guids.get(g.lower())
         if p is not None and p.suffix.lower() == ".mat" and p not in out:
             out.append(p)

@@ -86,6 +86,12 @@ CREATE TABLE IF NOT EXISTS conversions(
   created_at REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_conv_asset ON conversions(pack_id, asset_id);
+CREATE TABLE IF NOT EXISTS pack_units(
+  tree TEXT PRIMARY KEY,          -- source tree root the reference models came from
+  factor REAL NOT NULL,           -- extra scale every model of that tree needs (100 = metre geometry, cm header)
+  evidence TEXT,                  -- JSON: reference model -> measured max dimension
+  measured_at REAL NOT NULL
+);
 CREATE TABLE IF NOT EXISTS jobs(
   id TEXT PRIMARY KEY,
   kind TEXT NOT NULL,

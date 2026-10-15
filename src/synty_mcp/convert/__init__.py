@@ -6,6 +6,7 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -58,6 +59,25 @@ def plausible_max_m(asset_type: str | None) -> float:
     if t.startswith("vehicle"):
         return 40.0
     return 20.0
+
+
+TINY_ITEM_RE = re.compile(r"(coins?|bullets?|ammo|shells?|cartridges?|rings?|gems?|jewels?|beads?|buttons?|dice|pills?|"
+                          r"seeds?|keys?|nails?|screws?|tooth|teeth|earrings?|necklaces?|pendants?|crumbs?|droplets?)"
+                          r"([A-Z0-9].*)?$")
+
+
+def plausible_min_m(asset_type: str | None, asset_id: str = "") -> float:
+    """Smallest believable dimension for an asset class, used by the m-authored/cm-declared check
+    (old Maya exports: metre geometry in a centimetre FBX, imported 100x too small)."""
+    t = (asset_type or "").lower()
+    tokens = (asset_id or "").split("_")
+    if any(TINY_ITEM_RE.match(tok[:1].lower() + tok[1:]) for tok in tokens if tok):
+        return 0.002
+    if t.startswith(("building", "environment", "terrain")) or t == "skybox":
+        return 0.3
+    if t.startswith("character") or t.startswith("vehicle"):
+        return 0.2
+    return 0.02
 
 
 def resolve_preset(name: str, options: dict | None) -> dict:
@@ -145,16 +165,41 @@ class Converter:
             return r
         return None
 
+    def unit_factor(self, tree: str, references: list[Path], log=print) -> float:
+        """Extra scale for every model of a source tree, measured once on its biggest
+        buildings/vehicles/environment pieces and cached. Some old Synty source packs
+        (POLYGON Pirate) hold metre geometry in FBX files that declare centimetres, so
+        *everything* imports 100x small, warships included: no per-asset size check can
+        tell a 40 cm warship from a 40 cm crate, but a pack whose largest buildings all
+        measure under a metre is unambiguous."""
+        row = self.db.one("SELECT factor FROM pack_units WHERE tree=?", (tree,))
+        if row:
+            return float(row["factor"])
+        refs = [str(p) for p in references if Path(p).is_file()][:4]
+        blender = self.settings.blender_executable()
+        if not refs or not blender:
+            return 1.0
+        log(f"measuring unit scale of {tree} on {len(refs)} reference models")
+        rep = run_blender(blender, {"mode": "measure", "inputs": refs}, self.settings.blender_timeout_s, log=log)
+        sizes = {p: v.get("max_m") for p, v in (rep.get("sizes") or {}).items() if v.get("max_m")}
+        factor = 100.0 if sizes and max(sizes.values()) < 1.0 else 1.0
+        self.db.x("INSERT OR REPLACE INTO pack_units(tree, factor, evidence, measured_at) VALUES(?,?,?,?)",
+                  (tree, factor, dumps(sizes), now()))
+        return factor
+
     def convert(self, *, pack_id: str, asset_id: str, src: Path, node: str | None, textures: dict,
                 preset: str = "threejs_web", options: dict | None = None, force: bool = False,
-                max_plausible_m: float | None = None, log=print) -> dict:
+                max_plausible_m: float | None = None, min_plausible_m: float | None = None,
+                unit_factor: float = 1.0, log=print) -> dict:
         params = resolve_preset(preset, options)
+        if unit_factor != 1.0 and "scale" not in (options or {}):
+            params["scale"] = float(params.get("scale", 1.0)) * unit_factor
         src = Path(src)
         if not src.is_file():
             raise ConversionError(f"source model missing on disk: {src}")
         if src.suffix.lower() not in CONVERTIBLE:
             raise ConversionError(f"not a convertible model format: {src.suffix}")
-        key = cache_key(pack_id, asset_id, preset, params, src, node, [textures, max_plausible_m])
+        key = cache_key(pack_id, asset_id, preset, params, src, node, [textures, max_plausible_m, min_plausible_m])
         out = self.output_path(preset, pack_id, asset_id, params)
         with file_lock(self.settings.converted_dir / ".locks", key):
             hit = None if force else self.cached(key)
@@ -165,7 +210,8 @@ class Converter:
                 raise ConversionError("Blender not found: install it or set SYNTY_MCP_BLENDER")
             tmp_out = out.with_name(out.stem + ".tmp.glb")
             job = {"mode": "convert", "input": str(src), "output": str(tmp_out), "node": node,
-                   "textures": textures, "preset": params, "max_plausible_m": max_plausible_m}
+                   "textures": textures, "preset": params, "max_plausible_m": max_plausible_m,
+                   "min_plausible_m": min_plausible_m}
             log(f"blender convert {asset_id} [{preset}]")
             try:
                 rep = run_blender(blender, job, self.settings.blender_timeout_s, log=log)
