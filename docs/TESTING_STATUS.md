@@ -42,7 +42,6 @@ by Blender at test time. The repository contains no Synty files.
 | Live SyntyDex | **intentionally not implemented** | no documented API; only the local export remains |
 | Dashboard in a browser | **tested in Chrome with synthetic data** | login, search, details, 3D viewer (GLB loaded, 6.00 × 5.00 × 7.00 m measured by three.js), scene, packs, collection (zip + manifest), jobs. Not tried with real Synty packs, to avoid viewing their images |
 | Claude Code with `configs/claude-code.mcp.json` | not run | standard `.mcp.json` format; the stdio server is tested with an equivalent real MCP client |
-| Grok (`configs/grok_remote_mcp.py`) | **not tested** | needs an xAI key and a public server; check against current xAI docs |
 | Real `.unitypackage` packs (real Synty prefabs + `.mat`) | tested with synthetic fixtures only | synthetic fixtures cover GUIDs/`.mat`; Claude Code subsequently downloaded and indexed real packs, but detailed real-prefab coverage has not been established |
 | Real ANIMATION / INTERFACE / SIDEKICK / FX packs | ANIMATION conversion verified; other categories not tested | Goblin Locomotion was downloaded and used with real characters. INTERFACE / SIDEKICK / FX pack coverage remains unverified. |
 | Godot: import in the editor | not tested | GLBs are valid glTF without Draco; the `.tscn` uses the standard format 3 |

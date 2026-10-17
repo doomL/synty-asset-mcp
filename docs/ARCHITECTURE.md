@@ -1,7 +1,7 @@
 # Architecture
 
 ```
- agents (Claude Code, Codex, Grok…)            browser
+ agents (Claude Code, Codex, …)                browser
    │ stdio            │ Streamable HTTP + Bearer   │ HttpOnly cookie
    ▼                  ▼                            ▼
  mcp_server.py ── MCPServer (mcp 2.x) ──┐   http_app.py: /mcp /api /files /ui  (ASGI AuthMiddleware)

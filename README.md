@@ -4,7 +4,7 @@
 ![python](https://img.shields.io/badge/python-3.11%2B-blue) ![MCP](https://img.shields.io/badge/MCP-stdio%20%7C%20streamable%20HTTP-6f42c1) ![license](https://img.shields.io/badge/license-Apache--2.0-green)
 
 An MCP server that turns **your own** purchased Synty packs into a library AI agents can query
-(Claude Code, Codex, Grok…): search individual assets in English or Italian, inspect their size and geometry,
+(Claude Code, Codex, and other MCP clients): search individual assets in English or Italian, inspect their size and geometry,
 extract only what is needed and convert it to a **GLB ready for Three.js** or **Godot 4**, with a shared cache.
 
 - Cataloguing and semantics: **[synty-inventory](https://github.com/tom-swift-tech/synty-inventory)**, used as a
@@ -116,12 +116,11 @@ claude mcp add --transport http synty https://synty.example.com/mcp --header "Au
 
 [`configs/codex.config.toml`](configs/codex.config.toml) → merge into `~/.codex/config.toml` (local stdio or remote HTTP).
 
-### Grok
+### Other HTTP MCP clients
 
-[`configs/grok_remote_mcp.py`](configs/grok_remote_mcp.py): example connecting Grok to the remote endpoint through
-the xAI API's remote MCP tools. Not tested end-to-end: see [TESTING_STATUS](docs/TESTING_STATUS.md).
-`XAI_API_KEY` is read only by that example client script, never by the server: `synty-mcp serve` starts and
-works without it, and it is not needed for Claude Code, Codex or any other client.
+Any client that speaks MCP Streamable HTTP uses the same endpoint. Point it at `https://synty.example.com/mcp`
+and send `Authorization: Bearer $SYNTY_TOKEN` (the plain token whose `sha256:` form is listed in `SYNTY_MCP_TOKENS`).
+The server reads no vendor API key: `synty-mcp serve` starts with the tokens you configure for it.
 
 ### Typical agent workflow
 
