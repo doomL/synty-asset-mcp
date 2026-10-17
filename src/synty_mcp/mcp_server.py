@@ -31,8 +31,19 @@ ask the user before downloading. Assets are licensed to the owner: never upload 
 
 AssetClass = Literal["model", "prefab", "character", "animation", "effect", "ui", "texture"]
 Preset = Literal["threejs_web", "threejs_mobile", "godot4", "original_quality"]
-RO = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
+# All four MCP behaviour hints are set explicitly on every tool, describing the worst case of the
+# handler (any argument combination), so clients never fall back to the spec defaults
+# (readOnly=false, destructive=true, idempotent=false, openWorld=true).
+# Reads only the local catalog / state DB / job table; no files written, no network.
+RO = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+# Writes only additive or derived local data (stored archive copies, index rows, cached GLBs,
+# rendered previews); repeating the call with the same arguments yields the same state.
 LOCAL_WRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+# Local writes that can delete or overwrite existing files: extract_pack(force=true) removes and
+# re-creates the extracted tree; collections overwrite collections/<name>/ and copy into the
+# owner's project folder (export_to), replacing same-named files there.
+LOCAL_OVERWRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False)
+# Talks to the Synty Store (owner's session) and writes additive local data; deduplicated.
 NETWORK = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=True)
 
 EXPECTED = (ServiceError, ConversionError, StoreUnavailable, PathViolation, ValueError, KeyError, FileNotFoundError)
@@ -84,7 +95,7 @@ def build_server(svc: Service) -> MCPServer:
         manual-import fallback instead."""
         return svc.download_pack(pack, kinds=kinds, extract=extract, wait=wait, timeout=timeout)
 
-    @tool(LOCAL_WRITE)
+    @tool(LOCAL_OVERWRITE)
     def extract_pack(pack: str, archive_id: int | None = None, force: bool = False, wait: bool = True,
                      timeout: float = 1800) -> dict:
         """Extract a pack's verified archives (ZIP and .unitypackage, path-traversal safe) into the library and
@@ -177,7 +188,7 @@ def build_server(svc: Service) -> MCPServer:
         return res
 
     # --------------------------------------------------------- conversion
-    @tool(RO)
+    @tool(LOCAL_WRITE)
     def get_asset_file(ref: str, format: Literal["glb", "source"] = "glb", preset: Preset = "threejs_web",
                        wait: bool = True) -> dict:
         """Path (and authenticated URL in HTTP mode) of a ready-to-use file: a GLB for the preset (converted on
@@ -199,7 +210,7 @@ def build_server(svc: Service) -> MCPServer:
         concurrent identical requests run once. Unity shaders/particles/components are NOT converted."""
         return svc.convert_asset_to_glb(ref, preset=preset, options=options, force=force, wait=wait, timeout=timeout)
 
-    @tool(LOCAL_WRITE)
+    @tool(LOCAL_OVERWRITE)
     def prepare_asset_for_godot(ref: str, export_to: str | None = None, godot_res_root: str = "res://synty",
                                 wait: bool = True) -> dict:
         """GLB for Godot 4 (no Draco) plus a .tscn wrapper scene; optionally copied into a Godot project folder
@@ -220,7 +231,7 @@ def build_server(svc: Service) -> MCPServer:
         slot, the modular kit it belongs to (pieces by role) and, for characters, owned animation packs."""
         return svc.get_asset_dependencies(ref)
 
-    @tool(LOCAL_WRITE)
+    @tool(LOCAL_OVERWRITE)
     def prepare_asset_collection(
         refs: Annotated[list[str | dict], Field(description="refs or {ref, qty} objects")],
         name: str = "collection",

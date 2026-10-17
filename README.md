@@ -120,6 +120,8 @@ claude mcp add --transport http synty https://synty.example.com/mcp --header "Au
 
 [`configs/grok_remote_mcp.py`](configs/grok_remote_mcp.py): example connecting Grok to the remote endpoint through
 the xAI API's remote MCP tools. Not tested end-to-end: see [TESTING_STATUS](docs/TESTING_STATUS.md).
+`XAI_API_KEY` is read only by that example client script, never by the server: `synty-mcp serve` starts and
+works without it, and it is not needed for Claude Code, Codex or any other client.
 
 ### Typical agent workflow
 
@@ -147,6 +149,15 @@ not indexed yet and *probably* contain them (flagged as unverified).
 
 Asset reference: `PACK_ID/ASSET_ID` (e.g. `POLYGON_City/SM_Bld_House_01`); the bare id is enough when it is unique.
 Full examples of every call: [examples/tool-calls.md](examples/tool-calls.md).
+
+Every tool declares all four MCP behaviour hints explicitly (worst case over its arguments):
+
+| Hints (readOnly / destructive / idempotent / openWorld) | Tools |
+|---|---|
+| `true / false / true / false` | `list_owned_packs`, `get_library_status`, `search_assets`, `get_asset_details`, `find_similar_assets`, `suggest_assets_for_scene`, `list_pack_assets`, `get_asset_dependencies`, `search_syntydex`, `match_syntydex_asset_to_local`, `get_job`, `list_jobs` |
+| `false / false / true / false` | `import_archive`, `scan_library`, `get_asset_preview` (may render), `get_asset_file` (converts on demand), `convert_asset_to_glb`, `optimize_asset` |
+| `false / true / true / false` | `extract_pack` (`force=true` replaces the extracted tree), `prepare_asset_collection`, `prepare_asset_for_godot` (overwrite `collections/<name>/` and same-named files in `export_to`) |
+| `false / false / true / true` | `sync_owned_packs`, `download_pack` (Synty Store) |
 
 ### Conversion presets
 
