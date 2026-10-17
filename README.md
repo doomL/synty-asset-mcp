@@ -1,5 +1,7 @@
 # Synty Asset MCP
 
+[![M8ven Score](https://m8ven.ai/badge/mcp/dooml-synty-asset-mcp-1dp7lo?v=f773a1ded39634bf854d785760cf5fdb)](https://m8ven.ai/mcp/dooml-synty-asset-mcp-1dp7lo?s=readme)
+
 [![tests](https://github.com/doomL/synty-asset-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/doomL/synty-asset-mcp/actions/workflows/test.yml)
 ![python](https://img.shields.io/badge/python-3.11%2B-blue) ![MCP](https://img.shields.io/badge/MCP-stdio%20%7C%20streamable%20HTTP-6f42c1) ![license](https://img.shields.io/badge/license-Apache--2.0-green)
 
