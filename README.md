@@ -4,7 +4,7 @@
 ![python](https://img.shields.io/badge/python-3.11%2B-blue) ![MCP](https://img.shields.io/badge/MCP-stdio%20%7C%20streamable%20HTTP-6f42c1) ![license](https://img.shields.io/badge/license-Apache--2.0-green)
 
 An MCP server that turns **your own** purchased Synty packs into a library AI agents can query
-(Claude Code, Codex, Grok…): search individual assets in English or Italian, inspect their size and geometry,
+(Claude Code, Codex, and other MCP clients): search individual assets in English or Italian, inspect their size and geometry,
 extract only what is needed and convert it to a **GLB ready for Three.js** or **Godot 4**, with a shared cache.
 
 - Cataloguing and semantics: **[synty-inventory](https://github.com/tom-swift-tech/synty-inventory)**, used as a
@@ -116,10 +116,11 @@ claude mcp add --transport http synty https://synty.example.com/mcp --header "Au
 
 [`configs/codex.config.toml`](configs/codex.config.toml) → merge into `~/.codex/config.toml` (local stdio or remote HTTP).
 
-### Grok
+### Other HTTP MCP clients
 
-[`configs/grok_remote_mcp.py`](configs/grok_remote_mcp.py): example connecting Grok to the remote endpoint through
-the xAI API's remote MCP tools. Not tested end-to-end: see [TESTING_STATUS](docs/TESTING_STATUS.md).
+Any client that speaks MCP Streamable HTTP uses the same endpoint. Point it at `https://synty.example.com/mcp`
+and send `Authorization: Bearer $SYNTY_TOKEN` (the plain token whose `sha256:` form is listed in `SYNTY_MCP_TOKENS`).
+The server reads no vendor API key: `synty-mcp serve` starts with the tokens you configure for it.
 
 ### Typical agent workflow
 
@@ -147,6 +148,15 @@ not indexed yet and *probably* contain them (flagged as unverified).
 
 Asset reference: `PACK_ID/ASSET_ID` (e.g. `POLYGON_City/SM_Bld_House_01`); the bare id is enough when it is unique.
 Full examples of every call: [examples/tool-calls.md](examples/tool-calls.md).
+
+Every tool declares all four MCP behaviour hints explicitly (worst case over its arguments):
+
+| Hints (readOnly / destructive / idempotent / openWorld) | Tools |
+|---|---|
+| `true / false / true / false` | `list_owned_packs`, `get_library_status`, `search_assets`, `get_asset_details`, `find_similar_assets`, `suggest_assets_for_scene`, `list_pack_assets`, `get_asset_dependencies`, `search_syntydex`, `match_syntydex_asset_to_local`, `get_job`, `list_jobs` |
+| `false / false / true / false` | `import_archive`, `scan_library`, `get_asset_preview` (may render), `get_asset_file` (converts on demand), `convert_asset_to_glb`, `optimize_asset` |
+| `false / true / true / false` | `extract_pack` (`force=true` replaces the extracted tree), `prepare_asset_collection`, `prepare_asset_for_godot` (overwrite `collections/<name>/` and same-named files in `export_to`) |
+| `false / false / true / true` | `sync_owned_packs`, `download_pack` (Synty Store) |
 
 ### Conversion presets
 

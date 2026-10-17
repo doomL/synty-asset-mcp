@@ -205,3 +205,51 @@ def test_preview_not_sent_inline_by_default(indexed_pack):
     p = indexed_pack.get_asset_preview("SM_Prop_Well_01")
     assert p["available"] and p["source"] == "unity_package_thumbnail"
     assert p["image_inline"] is False and "not sent" in p["note"]
+
+
+# (readOnlyHint, destructiveHint, idempotentHint, openWorldHint) per tool, matching what each handler does.
+EXPECTED_HINTS = {
+    "list_owned_packs": (True, False, True, False),
+    "get_library_status": (True, False, True, False),
+    "search_assets": (True, False, True, False),
+    "get_asset_details": (True, False, True, False),
+    "find_similar_assets": (True, False, True, False),
+    "suggest_assets_for_scene": (True, False, True, False),
+    "list_pack_assets": (True, False, True, False),
+    "get_asset_dependencies": (True, False, True, False),
+    "search_syntydex": (True, False, True, False),
+    "match_syntydex_asset_to_local": (True, False, True, False),
+    "get_job": (True, False, True, False),
+    "list_jobs": (True, False, True, False),
+    "import_archive": (False, False, True, False),
+    "scan_library": (False, False, True, False),
+    "get_asset_preview": (False, False, True, False),
+    "get_asset_file": (False, False, True, False),
+    "convert_asset_to_glb": (False, False, True, False),
+    "optimize_asset": (False, False, True, False),
+    "extract_pack": (False, True, True, False),
+    "prepare_asset_for_godot": (False, True, True, False),
+    "prepare_asset_collection": (False, True, True, False),
+    "sync_owned_packs": (False, False, True, True),
+    "download_pack": (False, False, True, True),
+}
+
+
+def test_every_tool_has_all_four_explicit_hints(indexed_pack):
+    from mcp.client import Client
+
+    from synty_mcp.mcp_server import build_server
+
+    async def go():
+        async with Client(build_server(indexed_pack)) as c:
+            return (await c.list_tools()).tools
+
+    tools = asyncio.run(go())
+    assert {t.name for t in tools} == set(EXPECTED_HINTS)
+    assert len(tools) == 23
+    for t in tools:
+        ann = t.annotations
+        assert ann is not None, t.name
+        got = (ann.read_only_hint, ann.destructive_hint, ann.idempotent_hint, ann.open_world_hint)
+        assert all(isinstance(v, bool) for v in got), (t.name, got)
+        assert got == EXPECTED_HINTS[t.name], (t.name, got)
